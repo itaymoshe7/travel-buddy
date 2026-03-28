@@ -1,7 +1,9 @@
 import { useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
-type Field = 'fullName' | 'email' | 'password' | 'socialLink'
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type FieldKey = 'fullName' | 'email' | 'password' | 'socialLink'
 
 interface FormState {
   fullName:   string
@@ -18,9 +20,54 @@ interface FormErrors {
 }
 
 interface Props {
-  onNext:    (userId: string, socialLink: string) => void
-  onSignIn:  () => void
+  onNext:   (userId: string, socialLink: string) => void
+  onSignIn: () => void
 }
+
+// ─── Field component — defined at MODULE SCOPE so its identity is stable ──────
+// If defined inside the parent, React sees a new component type on every render
+// and unmounts/remounts the <input>, which closes the mobile keyboard.
+
+interface FieldProps {
+  id:          string
+  label:       string
+  type?:       string
+  value:       string
+  placeholder: string
+  error?:      string
+  hint?:       string
+  onChange:    (v: string) => void
+}
+
+function FormField({ id, label, type = 'text', value, placeholder, error, hint, onChange }: FieldProps) {
+  return (
+    <div>
+      <label htmlFor={id} className="block text-xs font-semibold uppercase tracking-wide mb-1.5"
+        style={{ color: '#64748B' }}>
+        {label}
+      </label>
+      <input
+        id={id}
+        name={id}
+        type={type}
+        value={value}
+        placeholder={placeholder}
+        autoComplete={type === 'password' ? 'new-password' : id}
+        onChange={e => onChange(e.target.value)}
+        className="w-full px-4 py-2.5 rounded-xl text-sm outline-none transition-colors"
+        style={{
+          border:     error ? '1.5px solid #F87171' : '1.5px solid #E2E8F0',
+          background: error ? '#FEF2F2' : '#F8FAFC',
+          color:      '#0F172A',
+        }}
+      />
+      {error && <p className="text-xs mt-1" style={{ color: '#EF4444' }}>{error}</p>}
+      {hint && !error && <p className="text-xs mt-1" style={{ color: '#94A3B8' }}>{hint}</p>}
+    </div>
+  )
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
 
 export default function RegisterStep1({ onNext, onSignIn }: Props) {
   const [form, setForm] = useState<FormState>({
@@ -29,13 +76,13 @@ export default function RegisterStep1({ onNext, onSignIn }: Props) {
     password:   '',
     socialLink: '',
   })
-  const [errors,      setErrors]      = useState<FormErrors>({})
+  const [errors,        setErrors]        = useState<FormErrors>({})
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
-  const [loading,     setLoading]     = useState(false)
-  const [serverError, setServerError] = useState<string | null>(null)
+  const [loading,       setLoading]       = useState(false)
+  const [serverError,   setServerError]   = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  function handleChange(field: Field, value: string) {
+  function handleChange(field: FieldKey, value: string) {
     setForm(prev => ({ ...prev, [field]: value }))
     setErrors(prev => ({ ...prev, [field]: undefined }))
     setServerError(null)
@@ -86,38 +133,6 @@ export default function RegisterStep1({ onNext, onSignIn }: Props) {
     onNext(data.user.id, form.socialLink.trim())
   }
 
-  // ─── helpers ────────────────────────────────────────────────────────────────
-
-  function Field({
-    label, type = 'text', value, placeholder, error, onChange, hint,
-  }: {
-    label: string; type?: string; value: string
-    placeholder: string; error?: string; onChange: (v: string) => void; hint?: string
-  }) {
-    return (
-      <div>
-        <label className="block text-xs font-semibold uppercase tracking-wide mb-1.5"
-          style={{ color: '#64748B' }}>
-          {label}
-        </label>
-        <input
-          type={type}
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          placeholder={placeholder}
-          className="w-full px-4 py-2.5 rounded-xl text-sm outline-none transition-colors"
-          style={{
-            border:     error ? '1.5px solid #F87171' : '1.5px solid #E2E8F0',
-            background: error ? '#FEF2F2' : '#F8FAFC',
-            color:      '#0F172A',
-          }}
-        />
-        {error && <p className="text-xs mt-1" style={{ color: '#EF4444' }}>{error}</p>}
-        {hint && !error && <p className="text-xs mt-1" style={{ color: '#94A3B8' }}>{hint}</p>}
-      </div>
-    )
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#F8FAFC' }}>
       <div className="w-full max-w-sm rounded-2xl p-8"
@@ -146,7 +161,7 @@ export default function RegisterStep1({ onNext, onSignIn }: Props) {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="relative w-24 h-24 rounded-full flex items-center justify-center focus:outline-none transition-colors group"
+            className="relative w-24 h-24 rounded-full flex items-center justify-center focus:outline-none transition-colors"
             style={{ background: '#F1F5F9', border: '2px dashed #CBD5E1' }}
             aria-label="Upload profile picture"
           >
@@ -167,30 +182,30 @@ export default function RegisterStep1({ onNext, onSignIn }: Props) {
             onChange={handleAvatarChange} />
         </div>
 
-        {/* Form */}
+        {/* Form — stable <FormField> component, defined outside this function */}
         <div className="space-y-4">
-          <Field label="Full Name"    value={form.fullName}
-            placeholder="Jane Doe"           error={errors.fullName}
-            onChange={v => handleChange('fullName', v)} />
+          <FormField id="fullName"   label="Full Name"
+            value={form.fullName}   placeholder="Jane Doe"
+            error={errors.fullName} onChange={v => handleChange('fullName', v)} />
 
-          <Field label="Email"        type="email" value={form.email}
-            placeholder="jane@example.com"   error={errors.email}
-            onChange={v => handleChange('email', v)} />
+          <FormField id="email"      label="Email"    type="email"
+            value={form.email}      placeholder="jane@example.com"
+            error={errors.email}   onChange={v => handleChange('email', v)} />
 
-          <Field label="Password"     type="password" value={form.password}
-            placeholder="6+ characters"      error={errors.password}
-            hint="Minimum 6 characters"
+          <FormField id="password"   label="Password" type="password"
+            value={form.password}   placeholder="6+ characters"
+            error={errors.password} hint="Minimum 6 characters"
             onChange={v => handleChange('password', v)} />
 
-          <Field label="Social Profile Link" value={form.socialLink}
-            placeholder="https://instagram.com/you"
-            error={errors.socialLink}
-            hint="Instagram or Facebook profile URL"
+          <FormField id="socialLink" label="Social Profile Link"
+            value={form.socialLink}   placeholder="https://instagram.com/you"
+            error={errors.socialLink} hint="Instagram or Facebook profile URL"
             onChange={v => handleChange('socialLink', v)} />
         </div>
 
         {serverError && (
-          <div className="mt-4 px-4 py-3 rounded-xl" style={{ background: '#FEF2F2', border: '1px solid #FECACA' }}>
+          <div className="mt-4 px-4 py-3 rounded-xl"
+            style={{ background: '#FEF2F2', border: '1px solid #FECACA' }}>
             <p className="text-xs" style={{ color: '#DC2626' }}>{serverError}</p>
           </div>
         )}
