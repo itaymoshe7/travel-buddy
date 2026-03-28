@@ -10,7 +10,8 @@ interface MomentCard {
   start_date:    string | null
   end_date:      string | null
   activity_type: string
-  status?:       string        // 'pending' | 'accepted' — only set for joined moments
+  creator_id?:   string       // only set for joined moments (needed for DM fallback)
+  status?:       string       // 'pending' | 'accepted' — only set for joined moments
   chatId?:       string | null // only set for joined moments
 }
 
@@ -82,9 +83,33 @@ function MomentItem({
   moment:      MomentCard
   onOpenChat?: (chatId: string, name: string) => void
 }) {
+  const [chatting, setChatting] = useState(false)
   const dateStr    = formatDateRange(moment.start_date, moment.end_date)
   const isApproved = moment.status === 'accepted'
-  const chatActive = isApproved && !!moment.chatId
+  const isPending  = moment.status === 'pending'
+  const showChat   = onOpenChat !== undefined && (isApproved || isPending)
+
+  async function handleChat() {
+    if (!onOpenChat || chatting) return
+
+    if (isApproved && moment.chatId) {
+      // Accepted → go straight to the group chat
+      onOpenChat(moment.chatId, moment.title)
+      return
+    }
+
+    if (isPending && moment.creator_id) {
+      // Pending → open a 1-on-1 DM with the creator (same RPC as ExplorePage)
+      setChatting(true)
+      const { data: chatId, error } = await supabase.rpc('find_or_create_dm', {
+        other_user_id: moment.creator_id,
+      })
+      setChatting(false)
+      if (!error && chatId) {
+        onOpenChat(chatId as string, moment.title)
+      }
+    }
+  }
 
   return (
     <div className="rounded-2xl overflow-hidden"
@@ -115,20 +140,16 @@ function MomentItem({
             </p>
           </div>
 
-          {/* Chat button or chevron */}
-          {onOpenChat !== undefined ? (
+          {/* Chat button (joined tab) or chevron (posts tab) */}
+          {showChat ? (
             <button
               type="button"
-              onClick={() => chatActive && onOpenChat(moment.chatId!, moment.title)}
-              disabled={!chatActive}
+              onClick={handleChat}
+              disabled={chatting}
               className="shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider focus:outline-none transition-colors"
-              style={
-                chatActive
-                  ? { background: 'rgba(29,78,216,0.10)', color: '#1D4ED8', cursor: 'pointer' }
-                  : { background: '#F1F5F9', color: '#CBD5E1', cursor: 'not-allowed' }
-              }
+              style={{ background: 'rgba(29,78,216,0.10)', color: '#1D4ED8', cursor: 'pointer' }}
             >
-              Chat
+              {chatting ? '…' : 'Chat'}
             </button>
           ) : (
             <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"
@@ -138,7 +159,7 @@ function MomentItem({
           )}
         </div>
 
-        {/* Status badge — only shown in joined tab (when status is set) */}
+        {/* Status badge — only shown in joined tab */}
         {moment.status && (
           <div className="mt-2.5 pl-14">
             <StatusBadge status={moment.status} />
@@ -198,7 +219,7 @@ export default function MyMoments({ userId, onOpenChat }: Props) {
 
       const { data } = await supabase
         .from('moments')
-        .select('id, title, destination, start_date, end_date, activity_type')
+        .select('id, title, destination, start_date, end_date, activity_type, creator_id')
         .in('id', ids)
 
       // Preserve the request ordering (most recent first)

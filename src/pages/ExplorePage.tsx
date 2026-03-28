@@ -123,23 +123,21 @@ function MomentCard({
   moment,
   userId,
   requestInfo,
-  creatorChatId,
   onRequested,
   onToast,
   onOpenChat,
 }: {
-  moment:        MomentRow
-  userId:        string
-  requestInfo:   RequestInfo | null
-  creatorChatId: string | null   // non-null when this user is the creator and a chat exists
-  onRequested:   (id: string) => void
-  onToast:       (msg: string, kind: 'success' | 'error') => void
-  onOpenChat:    (chatId: string, name: string) => void
+  moment:      MomentRow
+  userId:      string
+  requestInfo: RequestInfo | null
+  onRequested: (id: string) => void
+  onToast:     (msg: string, kind: 'success' | 'error') => void
+  onOpenChat:  (chatId: string, name: string) => void
 }) {
   const [requesting, setRequesting] = useState(false)
+  const [chatting,   setChatting]   = useState(false)
   const isOwn    = moment.creator_id === userId
   const status   = requestInfo?.status ?? null
-  const chatId   = requestInfo?.chatId ?? null
   const isPending  = status === 'pending'
   const isAccepted = status === 'accepted'
 
@@ -195,16 +193,23 @@ function MomentCard({
     requestBtnLabel = requesting ? '…' : 'Send Request'
   }
 
-  // Chat button — active when approved (requester) OR creator with an existing chat
-  const chatActive   = (isAccepted && !!chatId) || (isOwn && !!creatorChatId)
-  const resolvedChatId = isOwn ? creatorChatId : chatId
-  const chatBtnLabel =
-    chatActive              ? 'Chat'
-    : isOwn                 ? 'No chat yet'
-    : isPending             ? 'Join to chat'
-    : status === 'declined' ? 'Join to chat'
-    :                         'Join to chat'
-  const chatBtnStyle: React.CSSProperties = chatActive
+  // Chat button — active for every non-own card; calls find_or_create_dm RPC
+  async function handleChat() {
+    if (isOwn || chatting) return
+    setChatting(true)
+    const { data: chatId, error } = await supabase.rpc('find_or_create_dm', {
+      other_user_id: moment.creator_id,
+    })
+    setChatting(false)
+    if (error || !chatId) {
+      onToast('Could not open chat. Try again.', 'error')
+      return
+    }
+    onOpenChat(chatId as string, moment.title)
+  }
+
+  const chatBtnActive = !isOwn
+  const chatBtnStyle: React.CSSProperties = chatBtnActive
     ? { background: 'rgba(29,78,216,0.10)', color: '#1D4ED8', cursor: 'pointer' }
     : { background: '#F1F5F9', color: '#CBD5E1', cursor: 'not-allowed' }
 
@@ -276,12 +281,12 @@ function MomentCard({
 
           <button
             type="button"
-            onClick={() => chatActive && resolvedChatId && onOpenChat(resolvedChatId, moment.title)}
-            disabled={!chatActive}
+            onClick={handleChat}
+            disabled={!chatBtnActive || chatting}
             className="flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all focus:outline-none"
             style={chatBtnStyle}
           >
-            {chatBtnLabel}
+            {chatting ? '…' : 'Chat'}
           </button>
         </div>
       </div>
@@ -295,10 +300,8 @@ export default function ExplorePage({ userId, onNotifications, onOpenChat }: Pro
   const [moments,         setMoments]        = useState<MomentRow[]>([])
   const [loading,         setLoading]        = useState(true)
   const [error,           setError]          = useState<string | null>(null)
-  // momentId → { status, chatId } — for moments the user requested to join
-  const [requestMap,      setRequestMap]     = useState<Map<string, RequestInfo>>(new Map())
-  // momentId → chatId — for moments the user created (group chat lookup)
-  const [creatorChatMap,  setCreatorChatMap] = useState<Map<string, string>>(new Map())
+  // momentId → { status, chatId } — tracks request state per moment
+  const [requestMap,   setRequestMap]   = useState<Map<string, RequestInfo>>(new Map())
   const [toasts,          setToasts]         = useState<ToastState[]>([])
   const [activeFilter,    setActiveFilter]   = useState<FilterId>('all')
   const [pendingCount,    setPendingCount]   = useState(0)
@@ -362,24 +365,12 @@ export default function ExplorePage({ userId, onNotifications, onOpenChat }: Pro
         .eq('creator_id', userId)
       const myMomentIds = (myMoments ?? []).map((m: { id: string }) => m.id)
       if (myMomentIds.length > 0) {
-        const [pendingRes, chatRes] = await Promise.all([
-          supabase
-            .from('moment_requests')
-            .select('id', { count: 'exact', head: true })
-            .in('moment_id', myMomentIds)
-            .eq('status', 'pending'),
-          // Chats this creator is already a participant in, keyed by moment_id
-          supabase
-            .from('chats')
-            .select('id, moment_id')
-            .in('moment_id', myMomentIds),
-        ])
-        setPendingCount(pendingRes.count ?? 0)
-        const cmap = new Map<string, string>()
-        for (const c of (chatRes.data ?? [])) {
-          if (c.moment_id) cmap.set(c.moment_id, c.id)
-        }
-        setCreatorChatMap(cmap)
+        const { count } = await supabase
+          .from('moment_requests')
+          .select('id', { count: 'exact', head: true })
+          .in('moment_id', myMomentIds)
+          .eq('status', 'pending')
+        setPendingCount(count ?? 0)
       }
 
       setLoading(false)
@@ -515,7 +506,6 @@ export default function ExplorePage({ userId, onNotifications, onOpenChat }: Pro
                 moment={moment}
                 userId={userId}
                 requestInfo={requestMap.get(moment.id) ?? null}
-                creatorChatId={creatorChatMap.get(moment.id) ?? null}
                 onRequested={id => setRequestMap(prev => {
                   const next = new Map(prev)
                   next.set(id, { status: 'pending', chatId: null })
