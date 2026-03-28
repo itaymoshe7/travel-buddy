@@ -12,10 +12,11 @@ interface MomentRow {
   activity_type: string
   creator_id: string
   profiles: {
-    full_name:  string | null
-    avatar_url: string | null
-    bio:        string | null
-    gender:     string | null
+    full_name:   string | null
+    avatar_url:  string | null
+    bio:         string | null
+    gender:      string | null
+    social_link: string | null
   } | null
 }
 
@@ -176,9 +177,20 @@ function MomentCard({
             <p className="text-sm font-semibold truncate" style={{ color: '#0F172A' }}>
               {creator?.full_name ?? 'Traveller'}
             </p>
-            {creator?.bio && (
+            {creator?.social_link ? (
+              <a
+                href={creator.social_link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs truncate block"
+                style={{ color: '#38BDF8' }}
+                onClick={e => e.stopPropagation()}
+              >
+                {(() => { try { return new URL(creator.social_link!).hostname.replace('www.', '') } catch { return creator.social_link } })()}
+              </a>
+            ) : creator?.bio ? (
               <p className="text-xs truncate" style={{ color: '#94A3B8' }}>{creator.bio}</p>
-            )}
+            ) : null}
           </div>
           <span className="text-xl leading-none" title={moment.activity_type}>
             {ACTIVITY_EMOJI[moment.activity_type] ?? '📍'}
@@ -272,7 +284,8 @@ export default function ExplorePage({ userId, onNotifications }: Props) {
             full_name,
             avatar_url,
             bio,
-            gender
+            gender,
+            social_link
           )
         `)
         .order('created_at', { ascending: false })
