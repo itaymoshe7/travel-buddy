@@ -238,12 +238,13 @@ function MomentCard({
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function ExplorePage({ userId, onNotifications }: Props) {
-  const [moments,    setMoments]    = useState<MomentRow[]>([])
-  const [loading,    setLoading]    = useState(true)
-  const [error,      setError]      = useState<string | null>(null)
-  const [requested,  setRequested]  = useState<Set<string>>(new Set())
-  const [toasts,     setToasts]     = useState<ToastState[]>([])
+  const [moments,      setMoments]      = useState<MomentRow[]>([])
+  const [loading,      setLoading]      = useState(true)
+  const [error,        setError]        = useState<string | null>(null)
+  const [requested,    setRequested]    = useState<Set<string>>(new Set())
+  const [toasts,       setToasts]       = useState<ToastState[]>([])
   const [activeFilter, setActiveFilter] = useState<FilterId>('all')
+  const [pendingCount, setPendingCount] = useState(0)
   const toastCounter = useRef(0)
 
   function pushToast(message: string, kind: 'success' | 'error') {
@@ -290,6 +291,21 @@ export default function ExplorePage({ userId, onNotifications }: Props) {
 
       if (reqs) setRequested(new Set(reqs.map(r => r.moment_id)))
 
+      // Pending join requests on moments I created → drives the bell badge
+      const { data: myMoments } = await supabase
+        .from('moments')
+        .select('id')
+        .eq('creator_id', userId)
+      const myMomentIds = (myMoments ?? []).map((m: { id: string }) => m.id)
+      if (myMomentIds.length > 0) {
+        const { count } = await supabase
+          .from('moment_requests')
+          .select('id', { count: 'exact', head: true })
+          .in('moment_id', myMomentIds)
+          .eq('status', 'pending')
+        setPendingCount(count ?? 0)
+      }
+
       setLoading(false)
     }
 
@@ -319,13 +335,21 @@ export default function ExplorePage({ userId, onNotifications }: Props) {
             type="button"
             aria-label="Notifications"
             onClick={onNotifications}
-            className="w-8 h-8 rounded-full flex items-center justify-center -mt-0.5 transition-colors focus:outline-none"
+            className="relative w-8 h-8 rounded-full flex items-center justify-center -mt-0.5 transition-colors focus:outline-none"
             style={{ background: '#F1F5F9', color: '#64748B' }}
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
               <path strokeLinecap="round" strokeLinejoin="round"
                 d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
             </svg>
+            {pendingCount > 0 && (
+              <span className="absolute top-0 right-0 flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+                  style={{ background: '#EF4444' }} />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5"
+                  style={{ background: '#EF4444' }} />
+              </span>
+            )}
           </button>
         </div>
 
