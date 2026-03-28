@@ -20,7 +20,8 @@ interface MomentRow {
 }
 
 interface Props {
-  userId: string
+  userId:          string
+  onNotifications: () => void
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -236,7 +237,7 @@ function MomentCard({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function ExplorePage({ userId }: Props) {
+export default function ExplorePage({ userId, onNotifications }: Props) {
   const [moments,    setMoments]    = useState<MomentRow[]>([])
   const [loading,    setLoading]    = useState(true)
   const [error,      setError]      = useState<string | null>(null)
@@ -317,6 +318,7 @@ export default function ExplorePage({ userId }: Props) {
           <button
             type="button"
             aria-label="Notifications"
+            onClick={onNotifications}
             className="w-8 h-8 rounded-full flex items-center justify-center -mt-0.5 transition-colors focus:outline-none"
             style={{ background: '#F1F5F9', color: '#64748B' }}
           >

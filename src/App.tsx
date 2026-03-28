@@ -9,7 +9,8 @@ import CreateMoment   from './pages/CreateMoment'
 import MyMoments      from './pages/MyMoments'
 import ProfileScreen  from './pages/ProfileScreen'
 import ChatList       from './pages/ChatList'
-import ChatRoom       from './pages/ChatRoom'
+import ChatRoom            from './pages/ChatRoom'
+import NotificationsPage  from './pages/NotificationsPage'
 import BottomNav from './components/BottomNav'
 import type { NavTab } from './components/BottomNav'
 
@@ -19,6 +20,7 @@ type Page =
   | 'my-moments'                                         // moments tab
   | 'chats' | 'chat-room'                                // chat flow
   | 'profile'                                            // profile tab
+  | 'notifications'                                      // alerts overlay
 
 // Map page → active nav tab
 function activeTab(page: Page): NavTab {
@@ -101,6 +103,16 @@ export default function App() {
     )
   }
 
+  if (page === 'notifications') {
+    return (
+      <NotificationsPage
+        userId={userId!}
+        onBack={() => setPage('explore')}
+        onGoToChat={() => setPage('chats')}
+      />
+    )
+  }
+
   if (page === 'chat-room') {
     return (
       <ChatRoom
@@ -117,7 +129,10 @@ export default function App() {
   return (
     <>
       {page === 'explore' && (
-        <ExplorePage userId={userId!} />
+        <ExplorePage
+          userId={userId!}
+          onNotifications={() => setPage('notifications')}
+        />
       )}
 
       {page === 'my-moments' && (
