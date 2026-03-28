@@ -205,7 +205,9 @@ function MomentCard({
       onToast('Could not open chat. Try again.', 'error')
       return
     }
-    onOpenChat(chatId as string, moment.title)
+    // Pass creator name as loading fallback; ChatRoom will confirm/update via DB
+    const creatorName = creator?.full_name ?? 'Traveller'
+    onOpenChat(chatId as string, creatorName)
   }
 
   const chatBtnActive = !isOwn

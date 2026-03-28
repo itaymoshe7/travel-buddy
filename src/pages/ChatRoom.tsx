@@ -15,7 +15,7 @@ type ProfileCache = Map<string, { full_name: string | null; avatar_url: string |
 interface Props {
   chatId:        string
   userId:        string
-  otherUserName: string
+  otherUserName: string  // used as loading placeholder only — ChatRoom self-derives the real title
   onBack:        () => void
 }
 
@@ -24,10 +24,13 @@ function formatTime(ts: string) {
 }
 
 export default function ChatRoom({ chatId, userId, otherUserName, onBack }: Props) {
-  const [messages,  setMessages]  = useState<MessageRow[]>([])
-  const [input,     setInput]     = useState('')
-  const [loading,   setLoading]   = useState(true)
-  const [sending,   setSending]   = useState(false)
+  const [messages,   setMessages]  = useState<MessageRow[]>([])
+  const [input,      setInput]     = useState('')
+  const [loading,    setLoading]   = useState(true)
+  const [sending,    setSending]   = useState(false)
+  // Room identity — derived from DB, starts with the passed-in fallback
+  const [roomTitle,    setRoomTitle]    = useState(otherUserName)
+  const [roomSubtitle, setRoomSubtitle] = useState('TravelBuddy Chat')
   const profilesRef = useRef<ProfileCache>(new Map())
   const bottomRef   = useRef<HTMLDivElement>(null)
 
@@ -40,14 +43,38 @@ export default function ChatRoom({ chatId, userId, otherUserName, onBack }: Prop
     let mounted = true
 
     async function init() {
-      // 1. Pre-load both participants' profiles into cache via security-definer RPC.
-      //    Direct chat_participants queries now only return the caller's own row
-      //    (RLS fix), so the RPC is required to see all profiles in this chat.
-      const { data: parts } = await supabase
-        .rpc('get_chat_participants', { p_chat_id: chatId })
+      // 1. Load participants + chat metadata in parallel
+      const [partsRes, chatRes] = await Promise.all([
+        // Security-definer RPC needed: direct chat_participants query only returns own row
+        supabase.rpc('get_chat_participants', { p_chat_id: chatId }),
+        // Fetch whether this is a group chat (has moment_id) or a DM
+        supabase
+          .from('chats')
+          .select('moment_id, moments(title)')
+          .eq('id', chatId)
+          .single(),
+      ])
 
-      for (const p of (parts ?? []) as any[]) {
+      const parts = (partsRes.data ?? []) as any[]
+      for (const p of parts) {
         profilesRef.current.set(p.user_id, { full_name: p.full_name, avatar_url: p.avatar_url })
+      }
+
+      // Derive the room title from what we just fetched
+      if (mounted) {
+        const chatMeta = chatRes.data as { moment_id: string | null; moments: { title: string } | null } | null
+        if (chatMeta?.moment_id && chatMeta.moments?.title) {
+          // Group chat — show the moment name
+          setRoomTitle(chatMeta.moments.title)
+          setRoomSubtitle('Group Chat')
+        } else {
+          // DM — show the other participant's name
+          const other = parts.find((p: any) => p.user_id !== userId)
+          if (other?.full_name) {
+            setRoomTitle(other.full_name)
+            setRoomSubtitle('Direct Message')
+          }
+        }
       }
 
       // 2. Load message history
@@ -136,9 +163,9 @@ export default function ChatRoom({ chatId, userId, otherUserName, onBack }: Prop
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <div>
-          <p className="text-sm font-bold text-text-main">{otherUserName}</p>
-          <p className="text-xs text-slate-400">TravelBuddy Chat</p>
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-text-main truncate">{roomTitle}</p>
+          <p className="text-xs text-slate-400">{roomSubtitle}</p>
         </div>
       </div>
 
@@ -153,7 +180,7 @@ export default function ChatRoom({ chatId, userId, otherUserName, onBack }: Prop
         {!loading && messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center">
             <div className="text-3xl mb-3">👋</div>
-            <p className="text-sm text-slate-500">Say hello to {otherUserName}!</p>
+            <p className="text-sm text-slate-500">Say hello to {roomTitle}!</p>
           </div>
         )}
 

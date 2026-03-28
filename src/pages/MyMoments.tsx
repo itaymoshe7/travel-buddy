@@ -10,7 +10,8 @@ interface MomentCard {
   start_date:    string | null
   end_date:      string | null
   activity_type: string
-  creator_id?:   string       // only set for joined moments (needed for DM fallback)
+  creator_id?:   string       // only set for joined moments
+  creator_name?: string | null // loaded alongside creator_id for DM name fallback
   status?:       string       // 'pending' | 'accepted' — only set for joined moments
   chatId?:       string | null // only set for joined moments
 }
@@ -106,7 +107,9 @@ function MomentItem({
       })
       setChatting(false)
       if (!error && chatId) {
-        onOpenChat(chatId as string, moment.title)
+        // Pass creator name as loading fallback; ChatRoom self-derives the real title
+        const fallback = moment.creator_name ?? 'Traveller'
+        onOpenChat(chatId as string, fallback)
       }
     }
   }
@@ -219,17 +222,24 @@ export default function MyMoments({ userId, onOpenChat }: Props) {
 
       const { data } = await supabase
         .from('moments')
-        .select('id, title, destination, start_date, end_date, activity_type, creator_id')
+        .select('id, title, destination, start_date, end_date, activity_type, creator_id, profiles!creator_id(full_name)')
         .in('id', ids)
 
       // Preserve the request ordering (most recent first)
-      const momentById = new Map(((data as MomentCard[]) ?? []).map(m => [m.id, m]))
+      type RawMoment = MomentCard & { profiles?: { full_name: string | null } | null }
+      const momentById = new Map(((data as RawMoment[]) ?? []).map(m => [m.id, m]))
       const enriched = ids
         .map(id => {
           const m = momentById.get(id)
           if (!m) return null
           const req = reqByMoment.get(id)!
-          return { ...m, status: req.status, chatId: req.chatId }
+          const { profiles, ...rest } = m
+          return {
+            ...rest,
+            creator_name: profiles?.full_name ?? null,
+            status:  req.status,
+            chatId:  req.chatId,
+          }
         })
         .filter(Boolean) as MomentCard[]
 
