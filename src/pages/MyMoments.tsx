@@ -226,7 +226,8 @@ export default function MyMoments({ userId, onOpenChat }: Props) {
         .in('id', ids)
 
       // Preserve the request ordering (most recent first)
-      type RawMoment = MomentCard & { profiles?: { full_name: string | null } | null }
+      // Supabase returns joined rows as an array even for a single FK match
+      type RawMoment = MomentCard & { profiles?: Array<{ full_name: string | null }> | null }
       const momentById = new Map(((data as RawMoment[]) ?? []).map(m => [m.id, m]))
       const enriched = ids
         .map(id => {
@@ -236,7 +237,7 @@ export default function MyMoments({ userId, onOpenChat }: Props) {
           const { profiles, ...rest } = m
           return {
             ...rest,
-            creator_name: profiles?.full_name ?? null,
+            creator_name: profiles?.[0]?.full_name ?? null,
             status:  req.status,
             chatId:  req.chatId,
           }
