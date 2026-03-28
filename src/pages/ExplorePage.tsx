@@ -12,9 +12,10 @@ interface MomentRow {
   activity_type: string
   creator_id: string
   profiles: {
-    full_name: string | null
+    full_name:  string | null
     avatar_url: string | null
-    bio: string | null
+    bio:        string | null
+    gender:     string | null
   } | null
 }
 
@@ -146,10 +147,22 @@ function MomentCard({
   const dateStr = formatDateRange(moment.start_date, moment.end_date)
   const spots   = spotsLeft(moment.id)
 
+  const gender = creator?.gender ?? null
+  const cardBg =
+    gender === 'female'
+      ? 'linear-gradient(145deg, #FCE4EC 0%, #FFFFFF 100%)'
+      : gender === 'male'
+        ? 'linear-gradient(145deg, #E0F7FA 0%, #FFFFFF 100%)'
+        : 'linear-gradient(145deg, rgba(253,242,248,0.9) 0%, rgba(239,246,255,0.9) 100%)'
+  const imInColor =
+    gender === 'female' ? '#F472B6'
+    : gender === 'male' ? '#1D4ED8'
+    : '#F472B6'
+
   return (
     <div className="rounded-2xl overflow-hidden"
       style={{
-        background:  'linear-gradient(145deg, rgba(253,242,248,0.9) 0%, rgba(239,246,255,0.9) 100%)',
+        background:  cardBg,
         boxShadow:   '0 2px 12px rgba(15,23,42,0.07), 0 1px 3px rgba(15,23,42,0.05)',
         border:      '1px solid rgba(226,232,240,0.7)',
       }}>
@@ -201,7 +214,7 @@ function MomentCard({
                 ? { background: '#F1F5F9', color: '#94A3B8', cursor: 'not-allowed' }
                 : alreadyRequested
                   ? { background: 'rgba(34,197,94,0.1)', color: '#16A34A', border: '1px solid rgba(34,197,94,0.25)', cursor: 'default' }
-                  : { background: '#F472B6', color: 'white' }
+                  : { background: imInColor, color: 'white' }
             }
           >
             {requesting ? '…' : isOwn ? 'Your moment' : alreadyRequested ? '✓ Sent' : "I'm in"}
@@ -256,7 +269,8 @@ export default function ExplorePage({ userId }: Props) {
           profiles!creator_id (
             full_name,
             avatar_url,
-            bio
+            bio,
+            gender
           )
         `)
         .order('created_at', { ascending: false })
