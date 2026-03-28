@@ -1,0 +1,120 @@
+@import "tailwindcss";
+
+/* ─── Google Fonts: Inter ────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+/* ─── Design Tokens ──────────────────────────────────────────────────────── */
+@theme {
+  /* Core palette */
+  --color-primary:      #1D4ED8; /* deep blue  — buttons, links, focus rings  */
+  --color-accent-pink:  #F472B6; /* magenta    — active states, icons, badges */
+  --color-bg-base:      #F8FAFC; /* airy white — app background               */
+  --color-text-main:    #0F172A; /* near-black — headings and body copy        */
+  --color-text-sub:     #64748B; /* slate gray — subtitles and captions        */
+
+  /* Semantic aliases used across components */
+  --color-border:       #E2E8F0; /* dividers and input borders                */
+  --color-surface:      #FFFFFF; /* card and sheet backgrounds                */
+}
+
+/* ─── User Card ──────────────────────────────────────────────────────────── */
+@utility user-card {
+  background-color: var(--color-surface);
+  border-radius:    1rem;                                    /* rounded-2xl   */
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 4px 12px rgba(15, 23, 42, 0.06);
+}
+
+/* ─── Global Base ────────────────────────────────────────────────────────── */
+:root {
+  /* Font stack: Inter → SF Pro → system UI */
+  --font-sans: 'Inter', ui-sans-serif, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', Consolas, monospace;
+
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+
+  color:            var(--color-text-main);
+  background-color: var(--color-bg-base);
+
+  /* Enable font-feature-settings for Inter's tabular numerals */
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+
+  font-synthesis:          none;
+  text-rendering:          optimizeLegibility;
+  -webkit-font-smoothing:  antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Layout shell ───────────────────────────────────────────────────────── */
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100svh;
+}
+
+#root {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Typography ─────────────────────────────────────────────────────────── */
+h1, h2, h3 {
+  font-family:    var(--font-sans);
+  font-weight:    700;
+  letter-spacing: -0.02em;
+  color:          var(--color-text-main);
+  margin:         0;
+}
+
+p {
+  margin: 0;
+  color: var(--color-text-sub);
+}
+
+/* ─── Inputs — global defaults ───────────────────────────────────────────── */
+/* Any <input> or <textarea> not given an explicit class still gets clean
+   baseline styles so unstyled elements don't look broken.                  */
+input,
+textarea {
+  font-family: var(--font-sans);
+  font-size:   0.875rem;   /* 14px */
+  color:       var(--color-text-main);
+  background:  #F8FAFC;
+  border:      1.5px solid var(--color-border);
+  border-radius: 0.75rem; /* rounded-xl */
+  outline:     none;
+  transition:  border-color 150ms ease, background 150ms ease;
+}
+
+input:focus,
+textarea:focus {
+  border-color: var(--color-primary);
+  background:   #FFFFFF;
+  box-shadow:   0 0 0 3px rgba(29, 78, 216, 0.12);
+}
+
+/* ─── Buttons — global baseline ──────────────────────────────────────────── */
+/* All <button> elements default to fully rounded and pointer cursor.
+   Component-level Tailwind classes override colours as needed.             */
+button {
+  font-family:   var(--font-sans);
+  font-weight:   600;
+  border-radius: 9999px;   /* rounded-full */
+  cursor:        pointer;
+  border:        none;
+  transition:    opacity 120ms ease, transform 80ms ease;
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+button:disabled {
+  cursor:  not-allowed;
+  opacity: 0.55;
+}
