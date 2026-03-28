@@ -5,7 +5,7 @@ import RegisterStep1  from './pages/RegisterStep1'
 import RegisterStep2  from './pages/RegisterStep2'
 import ExplorePage    from './pages/ExplorePage'
 import CreateMoment   from './pages/CreateMoment'
-import MyRequests     from './pages/MyRequests'
+import MyMoments      from './pages/MyMoments'
 import ProfileScreen  from './pages/ProfileScreen'
 import ChatList       from './pages/ChatList'
 import ChatRoom       from './pages/ChatRoom'
@@ -15,15 +15,15 @@ import type { NavTab } from './components/BottomNav'
 type Page =
   | 'welcome' | 'login' | 'step1' | 'step2'   // unauthenticated
   | 'explore' | 'create'                        // explore flow
-  | 'my-requests'                               // requests tab
+  | 'my-moments'                                // moments tab
   | 'chats' | 'chat-room'                       // chat flow
   | 'profile'                                   // profile tab
 
 // Map page → active nav tab
 function activeTab(page: Page): NavTab {
   if (page === 'chats' || page === 'chat-room') return 'chats'
-  if (page === 'my-requests') return 'my-requests'
-  if (page === 'profile')     return 'profile'
+  if (page === 'my-moments') return 'my-moments'
+  if (page === 'profile')    return 'profile'
   return 'explore'
 }
 
@@ -110,8 +110,8 @@ export default function App() {
         />
       )}
 
-      {page === 'my-requests' && (
-        <MyRequests userId={userId!} />
+      {page === 'my-moments' && (
+        <MyMoments userId={userId!} />
       )}
 
       {page === 'chats' && (
