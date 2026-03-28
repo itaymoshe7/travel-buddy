@@ -104,10 +104,7 @@ export default function App() {
   return (
     <>
       {page === 'explore' && (
-        <ExplorePage
-          userId={userId!}
-          onCreateMoment={() => setPage('create')}
-        />
+        <ExplorePage userId={userId!} />
       )}
 
       {page === 'my-moments' && (
@@ -135,6 +132,7 @@ export default function App() {
       <BottomNav
         active={activeTab(page)}
         onChange={goTab}
+        onAdd={() => setPage('create')}
       />
     </>
   )

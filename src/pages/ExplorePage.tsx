@@ -20,7 +20,6 @@ interface MomentRow {
 
 interface Props {
   userId: string
-  onCreateMoment: () => void
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -224,7 +223,7 @@ function MomentCard({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function ExplorePage({ userId, onCreateMoment }: Props) {
+export default function ExplorePage({ userId }: Props) {
   const [moments,    setMoments]    = useState<MomentRow[]>([])
   const [loading,    setLoading]    = useState(true)
   const [error,      setError]      = useState<string | null>(null)
@@ -384,21 +383,11 @@ export default function ExplorePage({ userId, onCreateMoment }: Props) {
             <h2 className="text-lg font-bold mb-2" style={{ color: '#0F172A' }}>
               {activeFilter === 'all' ? 'No moments yet. Start the journey!' : 'No moments in this category.'}
             </h2>
-            <p className="text-sm mb-8 max-w-xs" style={{ color: '#64748B' }}>
+            <p className="text-sm max-w-xs" style={{ color: '#64748B' }}>
               {activeFilter === 'all'
-                ? 'Be the first to drop a moment and connect with fellow travellers.'
-                : 'Try a different filter or create a new moment.'}
+                ? 'Be the first to drop a moment and connect with fellow travellers. Tap + below!'
+                : 'Try a different filter or tap + to create a new moment.'}
             </p>
-            {activeFilter === 'all' && (
-              <button type="button" onClick={onCreateMoment}
-                className="w-16 h-16 rounded-full text-white shadow-lg flex items-center justify-center focus:outline-none"
-                style={{ background: '#1D4ED8' }}
-                aria-label="Create a moment">
-                <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                </svg>
-              </button>
-            )}
           </div>
         )}
 
@@ -420,19 +409,6 @@ export default function ExplorePage({ userId, onCreateMoment }: Props) {
 
       {/* ── Toasts ─────────────────────────────────────────────────────────── */}
       <Toast toasts={toasts} />
-
-      {/* ── FAB ────────────────────────────────────────────────────────────── */}
-      <button
-        type="button"
-        onClick={onCreateMoment}
-        aria-label="Create a Moment"
-        className="fixed bottom-20 right-5 w-14 h-14 rounded-full text-white shadow-lg flex items-center justify-center focus:outline-none"
-        style={{ background: '#1D4ED8', boxShadow: '0 4px 20px rgba(29,78,216,0.35)' }}
-      >
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-        </svg>
-      </button>
 
     </div>
   )
