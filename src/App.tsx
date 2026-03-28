@@ -3,6 +3,7 @@ import WelcomeScreen  from './pages/WelcomeScreen'
 import LoginForm      from './pages/LoginForm'
 import RegisterStep1  from './pages/RegisterStep1'
 import RegisterStep2  from './pages/RegisterStep2'
+import RegisterStep3  from './pages/RegisterStep3'
 import ExplorePage    from './pages/ExplorePage'
 import CreateMoment   from './pages/CreateMoment'
 import MyMoments      from './pages/MyMoments'
@@ -13,11 +14,11 @@ import BottomNav from './components/BottomNav'
 import type { NavTab } from './components/BottomNav'
 
 type Page =
-  | 'welcome' | 'login' | 'step1' | 'step2'   // unauthenticated
-  | 'explore' | 'create'                        // explore flow
-  | 'my-moments'                                // moments tab
-  | 'chats' | 'chat-room'                       // chat flow
-  | 'profile'                                   // profile tab
+  | 'welcome' | 'login' | 'step1' | 'step2' | 'step3'  // unauthenticated / onboarding
+  | 'explore' | 'create'                                 // explore flow
+  | 'my-moments'                                         // moments tab
+  | 'chats' | 'chat-room'                                // chat flow
+  | 'profile'                                            // profile tab
 
 // Map page → active nav tab
 function activeTab(page: Page): NavTab {
@@ -30,6 +31,7 @@ function activeTab(page: Page): NavTab {
 export default function App() {
   const [page,          setPage]         = useState<Page>('welcome')
   const [userId,        setUserId]       = useState<string | null>(null)
+  const [socialLink,    setSocialLink]   = useState<string>('')
   const [chatId,        setChatId]       = useState<string | null>(null)
   const [chatPartner,   setChatPartner]  = useState<string>('Traveller')
 
@@ -62,7 +64,7 @@ export default function App() {
   if (page === 'step1') {
     return (
       <RegisterStep1
-        onNext={id => { setUserId(id); setPage('step2') }}
+        onNext={(id, link) => { setUserId(id); setSocialLink(link); setPage('step2') }}
       />
     )
   }
@@ -70,6 +72,16 @@ export default function App() {
   if (page === 'step2') {
     return (
       <RegisterStep2
+        userId={userId!}
+        socialLink={socialLink}
+        onNext={() => setPage('step3')}
+      />
+    )
+  }
+
+  if (page === 'step3') {
+    return (
+      <RegisterStep3
         userId={userId!}
         onComplete={() => setPage('explore')}
       />

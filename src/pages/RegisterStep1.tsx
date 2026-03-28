@@ -1,35 +1,36 @@
 import { useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
-type Field = 'fullName' | 'email' | 'password' | 'instagram'
+type Field = 'fullName' | 'email' | 'password' | 'socialLink'
 
 interface FormState {
-  fullName: string
-  email: string
-  password: string
-  instagram: string
+  fullName:   string
+  email:      string
+  password:   string
+  socialLink: string
 }
 
 interface FormErrors {
-  fullName?: string
-  email?: string
-  password?: string
+  fullName?:   string
+  email?:      string
+  password?:   string
+  socialLink?: string
 }
 
 interface Props {
-  onNext: (userId: string) => void
+  onNext: (userId: string, socialLink: string) => void
 }
 
 export default function RegisterStep1({ onNext }: Props) {
   const [form, setForm] = useState<FormState>({
-    fullName: '',
-    email: '',
-    password: '',
-    instagram: '',
+    fullName:   '',
+    email:      '',
+    password:   '',
+    socialLink: '',
   })
-  const [errors, setErrors] = useState<FormErrors>({})
+  const [errors,      setErrors]      = useState<FormErrors>({})
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [loading,     setLoading]     = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -47,12 +48,18 @@ export default function RegisterStep1({ onNext }: Props) {
 
   function validate(): boolean {
     const next: FormErrors = {}
-    if (!form.fullName.trim()) next.fullName = 'Full name is required'
-    if (!form.email.trim()) next.email = 'Email is required'
+    if (!form.fullName.trim())
+      next.fullName = 'Full name is required'
+    if (!form.email.trim())
+      next.email = 'Email is required'
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
       next.email = 'Enter a valid email address'
-    if (form.password.length < 8)
-      next.password = 'Password must be at least 8 characters'
+    if (form.password.length < 6)
+      next.password = 'Password must be at least 6 characters'
+    if (!form.socialLink.trim())
+      next.socialLink = 'Social profile link is required'
+    else if (!/^https?:\/\//i.test(form.socialLink.trim()))
+      next.socialLink = 'Enter a full URL (e.g. https://instagram.com/you)'
     setErrors(next)
     return Object.keys(next).length === 0
   }
@@ -63,46 +70,74 @@ export default function RegisterStep1({ onNext }: Props) {
     setServerError(null)
 
     const { data, error } = await supabase.auth.signUp({
-      email: form.email,
+      email:    form.email,
       password: form.password,
       options: {
-        data: {
-          full_name: form.fullName.trim(),
-          instagram_handle: form.instagram.trim() || null,
-        },
+        data: { full_name: form.fullName.trim() },
       },
     })
 
     setLoading(false)
 
-    if (error) {
-      setServerError(error.message)
-      return
-    }
+    if (error) { setServerError(error.message); return }
+    if (!data.user) { setServerError('Sign-up failed — please try again.'); return }
 
-    if (!data.user) {
-      setServerError('Sign-up failed — please try again.')
-      return
-    }
+    onNext(data.user.id, form.socialLink.trim())
+  }
 
-    onNext(data.user.id)
+  // ─── helpers ────────────────────────────────────────────────────────────────
+
+  function Field({
+    label, type = 'text', value, placeholder, error, onChange, hint,
+  }: {
+    label: string; type?: string; value: string
+    placeholder: string; error?: string; onChange: (v: string) => void; hint?: string
+  }) {
+    return (
+      <div>
+        <label className="block text-xs font-semibold uppercase tracking-wide mb-1.5"
+          style={{ color: '#64748B' }}>
+          {label}
+        </label>
+        <input
+          type={type}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="w-full px-4 py-2.5 rounded-xl text-sm outline-none transition-colors"
+          style={{
+            border:     error ? '1.5px solid #F87171' : '1.5px solid #E2E8F0',
+            background: error ? '#FEF2F2' : '#F8FAFC',
+            color:      '#0F172A',
+          }}
+        />
+        {error && <p className="text-xs mt-1" style={{ color: '#EF4444' }}>{error}</p>}
+        {hint && !error && <p className="text-xs mt-1" style={{ color: '#94A3B8' }}>{hint}</p>}
+      </div>
+    )
   }
 
   return (
-    <div className="min-h-screen bg-bg-base flex items-center justify-center p-4">
-      <div className="user-card w-full max-w-sm p-8">
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#F8FAFC' }}>
+      <div className="w-full max-w-sm rounded-2xl p-8"
+        style={{ background: 'white', boxShadow: '0 4px 24px rgba(15,23,42,0.08)' }}>
 
-        {/* Step indicator */}
+        {/* Step indicator — 1 / 3 */}
         <div className="flex items-center gap-2 mb-6">
-          <div className="flex-1 h-1 rounded-full bg-primary" />
-          <div className="flex-1 h-1 rounded-full bg-slate-200" />
-          <span className="text-xs text-slate-400 ml-1">1 / 2</span>
+          <div className="flex-1 h-1 rounded-full" style={{ background: '#1D4ED8' }} />
+          <div className="flex-1 h-1 rounded-full" style={{ background: '#E2E8F0' }} />
+          <div className="flex-1 h-1 rounded-full" style={{ background: '#E2E8F0' }} />
+          <span className="text-xs ml-1" style={{ color: '#94A3B8' }}>1 / 3</span>
         </div>
 
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-text-main tracking-tight">Create your account</h1>
-          <p className="text-sm text-slate-500 mt-1">Join TravelBuddy and find your crew</p>
+          <h1 className="text-2xl font-bold tracking-tight" style={{ color: '#0F172A' }}>
+            Create your account
+          </h1>
+          <p className="text-sm mt-1" style={{ color: '#64748B' }}>
+            Join TravelBuddy and find your crew
+          </p>
         </div>
 
         {/* Avatar upload */}
@@ -110,107 +145,52 @@ export default function RegisterStep1({ onNext }: Props) {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="relative w-24 h-24 rounded-full bg-slate-100 border-2 border-dashed border-slate-300 hover:border-accent-pink hover:bg-pink-50 transition-colors group focus:outline-none focus:ring-2 focus:ring-accent-pink focus:ring-offset-2"
+            className="relative w-24 h-24 rounded-full flex items-center justify-center focus:outline-none transition-colors group"
+            style={{ background: '#F1F5F9', border: '2px dashed #CBD5E1' }}
             aria-label="Upload profile picture"
           >
             {avatarPreview ? (
-              <img
-                src={avatarPreview}
-                alt="Profile preview"
-                className="w-full h-full rounded-full object-cover"
-              />
+              <img src={avatarPreview} alt="Preview"
+                className="w-full h-full rounded-full object-cover" />
             ) : (
-              <span className="flex flex-col items-center justify-center gap-1 text-slate-400 group-hover:text-accent-pink transition-colors">
+              <span className="flex flex-col items-center gap-1" style={{ color: '#94A3B8' }}>
                 <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round"
                     d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
                 </svg>
-                <span className="text-[10px] font-medium uppercase tracking-wide">Upload</span>
+                <span className="text-[10px] font-medium uppercase tracking-wide">Photo</span>
               </span>
             )}
           </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleAvatarChange}
-          />
+          <input ref={fileInputRef} type="file" accept="image/*" className="hidden"
+            onChange={handleAvatarChange} />
         </div>
 
-        {/* Form fields */}
+        {/* Form */}
         <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
-              Full Name
-            </label>
-            <input
-              type="text"
-              value={form.fullName}
-              onChange={e => handleChange('fullName', e.target.value)}
-              placeholder="Jane Doe"
-              className={`w-full px-4 py-2.5 rounded-xl border text-sm text-text-main placeholder:text-slate-400 outline-none transition-colors
-                ${errors.fullName
-                  ? 'border-red-400 bg-red-50 focus:border-red-400'
-                  : 'border-slate-200 bg-slate-50 focus:border-primary focus:bg-white'}`}
-            />
-            {errors.fullName && <p className="text-xs text-red-500 mt-1">{errors.fullName}</p>}
-          </div>
+          <Field label="Full Name"    value={form.fullName}
+            placeholder="Jane Doe"           error={errors.fullName}
+            onChange={v => handleChange('fullName', v)} />
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
-              Email
-            </label>
-            <input
-              type="email"
-              value={form.email}
-              onChange={e => handleChange('email', e.target.value)}
-              placeholder="jane@example.com"
-              className={`w-full px-4 py-2.5 rounded-xl border text-sm text-text-main placeholder:text-slate-400 outline-none transition-colors
-                ${errors.email
-                  ? 'border-red-400 bg-red-50 focus:border-red-400'
-                  : 'border-slate-200 bg-slate-50 focus:border-primary focus:bg-white'}`}
-            />
-            {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
-          </div>
+          <Field label="Email"        type="email" value={form.email}
+            placeholder="jane@example.com"   error={errors.email}
+            onChange={v => handleChange('email', v)} />
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
-              Password
-            </label>
-            <input
-              type="password"
-              value={form.password}
-              onChange={e => handleChange('password', e.target.value)}
-              placeholder="8+ characters"
-              className={`w-full px-4 py-2.5 rounded-xl border text-sm text-text-main placeholder:text-slate-400 outline-none transition-colors
-                ${errors.password
-                  ? 'border-red-400 bg-red-50 focus:border-red-400'
-                  : 'border-slate-200 bg-slate-50 focus:border-primary focus:bg-white'}`}
-            />
-            {errors.password && <p className="text-xs text-red-500 mt-1">{errors.password}</p>}
-          </div>
+          <Field label="Password"     type="password" value={form.password}
+            placeholder="6+ characters"      error={errors.password}
+            hint="Minimum 6 characters"
+            onChange={v => handleChange('password', v)} />
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
-              Instagram Handle <span className="normal-case font-normal">(optional)</span>
-            </label>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm select-none">@</span>
-              <input
-                type="text"
-                value={form.instagram}
-                onChange={e => handleChange('instagram', e.target.value)}
-                placeholder="yourhandle"
-                className="w-full pl-8 pr-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:border-primary focus:bg-white text-sm text-text-main placeholder:text-slate-400 outline-none transition-colors"
-              />
-            </div>
-          </div>
+          <Field label="Social Profile Link" value={form.socialLink}
+            placeholder="https://instagram.com/you"
+            error={errors.socialLink}
+            hint="Instagram or Facebook profile URL"
+            onChange={v => handleChange('socialLink', v)} />
         </div>
 
         {serverError && (
-          <div className="mt-4 px-4 py-3 rounded-xl bg-red-50 border border-red-200">
-            <p className="text-xs text-red-600">{serverError}</p>
+          <div className="mt-4 px-4 py-3 rounded-xl" style={{ background: '#FEF2F2', border: '1px solid #FECACA' }}>
+            <p className="text-xs" style={{ color: '#DC2626' }}>{serverError}</p>
           </div>
         )}
 
@@ -218,14 +198,15 @@ export default function RegisterStep1({ onNext }: Props) {
           type="button"
           onClick={handleNext}
           disabled={loading}
-          className="mt-6 w-full py-3 rounded-xl bg-primary text-white text-sm font-semibold tracking-wide hover:bg-blue-700 active:bg-blue-800 disabled:opacity-60 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+          className="mt-6 w-full py-3 rounded-xl text-sm font-semibold tracking-wide transition-colors focus:outline-none"
+          style={{ background: '#1D4ED8', color: 'white', opacity: loading ? 0.6 : 1 }}
         >
           {loading ? 'Creating account…' : 'Next →'}
         </button>
 
-        <p className="text-center text-xs text-slate-500 mt-4">
+        <p className="text-center text-xs mt-4" style={{ color: '#94A3B8' }}>
           Already have an account?{' '}
-          <a href="#" className="text-primary font-semibold hover:underline">Sign in</a>
+          <a href="#" className="font-semibold" style={{ color: '#1D4ED8' }}>Sign in</a>
         </p>
 
       </div>
