@@ -19,9 +19,6 @@ type Page =
   | 'chats' | 'chat-room'                       // chat flow
   | 'profile'                                   // profile tab
 
-// Pages that show the bottom navigation bar
-const WITH_NAV: Page[] = ['explore', 'my-requests', 'chats', 'profile']
-
 // Map page → active nav tab
 function activeTab(page: Page): NavTab {
   if (page === 'chats' || page === 'chat-room') return 'chats'

@@ -1,3 +1,5 @@
+import React from 'react'
+
 export type NavTab = 'explore' | 'my-requests' | 'chats' | 'profile'
 
 interface Props {
@@ -5,7 +7,7 @@ interface Props {
   onChange: (tab: NavTab) => void
 }
 
-const TABS: { id: NavTab; label: string; icon: (active: boolean) => JSX.Element }[] = [
+const TABS: { id: NavTab; label: string; icon: (active: boolean) => React.ReactElement }[] = [
   {
     id: 'explore',
     label: 'Explore',
