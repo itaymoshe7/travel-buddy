@@ -123,16 +123,18 @@ function MomentCard({
   moment,
   userId,
   requestInfo,
+  creatorChatId,
   onRequested,
   onToast,
   onOpenChat,
 }: {
-  moment:      MomentRow
-  userId:      string
-  requestInfo: RequestInfo | null
-  onRequested: (id: string) => void
-  onToast:     (msg: string, kind: 'success' | 'error') => void
-  onOpenChat:  (chatId: string, name: string) => void
+  moment:        MomentRow
+  userId:        string
+  requestInfo:   RequestInfo | null
+  creatorChatId: string | null   // non-null when this user is the creator and a chat exists
+  onRequested:   (id: string) => void
+  onToast:       (msg: string, kind: 'success' | 'error') => void
+  onOpenChat:    (chatId: string, name: string) => void
 }) {
   const [requesting, setRequesting] = useState(false)
   const isOwn    = moment.creator_id === userId
@@ -193,8 +195,15 @@ function MomentCard({
     requestBtnLabel = requesting ? '…' : 'Send Request'
   }
 
-  // Chat button — active only when accepted and chat exists
-  const chatActive = isAccepted && !!chatId
+  // Chat button — active when approved (requester) OR creator with an existing chat
+  const chatActive   = (isAccepted && !!chatId) || (isOwn && !!creatorChatId)
+  const resolvedChatId = isOwn ? creatorChatId : chatId
+  const chatBtnLabel =
+    chatActive              ? 'Chat'
+    : isOwn                 ? 'No chat yet'
+    : isPending             ? 'Join to chat'
+    : status === 'declined' ? 'Join to chat'
+    :                         'Join to chat'
   const chatBtnStyle: React.CSSProperties = chatActive
     ? { background: 'rgba(29,78,216,0.10)', color: '#1D4ED8', cursor: 'pointer' }
     : { background: '#F1F5F9', color: '#CBD5E1', cursor: 'not-allowed' }
@@ -267,12 +276,12 @@ function MomentCard({
 
           <button
             type="button"
-            onClick={() => chatActive && onOpenChat(chatId!, creator?.full_name ?? 'Traveller')}
+            onClick={() => chatActive && resolvedChatId && onOpenChat(resolvedChatId, moment.title)}
             disabled={!chatActive}
             className="flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all focus:outline-none"
             style={chatBtnStyle}
           >
-            Chat
+            {chatBtnLabel}
           </button>
         </div>
       </div>
@@ -283,14 +292,16 @@ function MomentCard({
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function ExplorePage({ userId, onNotifications, onOpenChat }: Props) {
-  const [moments,      setMoments]      = useState<MomentRow[]>([])
-  const [loading,      setLoading]      = useState(true)
-  const [error,        setError]        = useState<string | null>(null)
-  // momentId → { status, chatId }
-  const [requestMap,   setRequestMap]   = useState<Map<string, RequestInfo>>(new Map())
-  const [toasts,       setToasts]       = useState<ToastState[]>([])
-  const [activeFilter, setActiveFilter] = useState<FilterId>('all')
-  const [pendingCount, setPendingCount] = useState(0)
+  const [moments,         setMoments]        = useState<MomentRow[]>([])
+  const [loading,         setLoading]        = useState(true)
+  const [error,           setError]          = useState<string | null>(null)
+  // momentId → { status, chatId } — for moments the user requested to join
+  const [requestMap,      setRequestMap]     = useState<Map<string, RequestInfo>>(new Map())
+  // momentId → chatId — for moments the user created (group chat lookup)
+  const [creatorChatMap,  setCreatorChatMap] = useState<Map<string, string>>(new Map())
+  const [toasts,          setToasts]         = useState<ToastState[]>([])
+  const [activeFilter,    setActiveFilter]   = useState<FilterId>('all')
+  const [pendingCount,    setPendingCount]   = useState(0)
   const toastCounter = useRef(0)
 
   function pushToast(message: string, kind: 'success' | 'error') {
@@ -344,19 +355,31 @@ export default function ExplorePage({ userId, onNotifications, onOpenChat }: Pro
         setRequestMap(map)
       }
 
-      // Pending join requests on moments I created → drives the bell badge
+      // Moments I created → bell badge count + creator chat lookup
       const { data: myMoments } = await supabase
         .from('moments')
         .select('id')
         .eq('creator_id', userId)
       const myMomentIds = (myMoments ?? []).map((m: { id: string }) => m.id)
       if (myMomentIds.length > 0) {
-        const { count } = await supabase
-          .from('moment_requests')
-          .select('id', { count: 'exact', head: true })
-          .in('moment_id', myMomentIds)
-          .eq('status', 'pending')
-        setPendingCount(count ?? 0)
+        const [pendingRes, chatRes] = await Promise.all([
+          supabase
+            .from('moment_requests')
+            .select('id', { count: 'exact', head: true })
+            .in('moment_id', myMomentIds)
+            .eq('status', 'pending'),
+          // Chats this creator is already a participant in, keyed by moment_id
+          supabase
+            .from('chats')
+            .select('id, moment_id')
+            .in('moment_id', myMomentIds),
+        ])
+        setPendingCount(pendingRes.count ?? 0)
+        const cmap = new Map<string, string>()
+        for (const c of (chatRes.data ?? [])) {
+          if (c.moment_id) cmap.set(c.moment_id, c.id)
+        }
+        setCreatorChatMap(cmap)
       }
 
       setLoading(false)
@@ -492,6 +515,7 @@ export default function ExplorePage({ userId, onNotifications, onOpenChat }: Pro
                 moment={moment}
                 userId={userId}
                 requestInfo={requestMap.get(moment.id) ?? null}
+                creatorChatId={creatorChatMap.get(moment.id) ?? null}
                 onRequested={id => setRequestMap(prev => {
                   const next = new Map(prev)
                   next.set(id, { status: 'pending', chatId: null })

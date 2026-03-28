@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { supabase } from './lib/supabase'
 import WelcomeScreen  from './pages/WelcomeScreen'
 import LoginForm      from './pages/LoginForm'
 import RegisterStep1  from './pages/RegisterStep1'
@@ -36,9 +37,54 @@ export default function App() {
   const [socialLink,    setSocialLink]   = useState<string>('')
   const [chatId,        setChatId]       = useState<string | null>(null)
   const [chatPartner,   setChatPartner]  = useState<string>('Traveller')
+  const [authReady,     setAuthReady]    = useState(false)
+
+  // ── Restore session on mount + listen for future auth events ──────────────
+  useEffect(() => {
+    // getSession() reads the token already stored in localStorage by the SDK
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUserId(session.user.id)
+        setPage('explore')
+      }
+      setAuthReady(true)
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUserId(session.user.id)
+        // Only navigate away from unauthenticated pages
+        setPage(prev =>
+          prev === 'welcome' || prev === 'login' ? 'explore' : prev
+        )
+      } else {
+        setUserId(null)
+        setPage('welcome')
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
 
   function goTab(tab: NavTab) {
     setPage(tab as Page)
+  }
+
+  // ── Splash while checking stored session ──────────────────────────────────
+
+  if (!authReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center"
+        style={{ background: 'radial-gradient(ellipse 130% 90% at 50% 60%, #0EA5E9 0%, #1D4ED8 45%, #1E3A8A 100%)' }}>
+        <div className="flex flex-col items-center gap-4">
+          <svg className="w-10 h-10 text-white animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+          </svg>
+          <span className="text-white text-sm font-semibold tracking-wide opacity-80">TravelBuddy</span>
+        </div>
+      </div>
+    )
   }
 
   // ── Unauthenticated ───────────────────────────────────────────────────────
@@ -169,7 +215,7 @@ export default function App() {
       {page === 'profile' && (
         <ProfileScreen
           userId={userId!}
-          onLogOut={() => { setUserId(null); setPage('welcome') }}
+          onLogOut={() => { supabase.auth.signOut() }}
         />
       )}
 

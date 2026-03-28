@@ -102,24 +102,59 @@ export default function NotificationsPage({ userId, onBack, onOpenChat }: Props)
   async function handleApprove(req: IncomingRequest) {
     setActing(req.id)
 
-    // 1. Create the chat room
-    const { data: chat, error: e1 } = await supabase
-      .from('chats').insert({}).select('id').single()
+    // ── 1. Does a group chat for this moment already exist? ──────────────────
+    // Query via moment_requests (the creator can read requests on their own
+    // moments per RLS) to find any previously created chat_id for this moment.
+    const { data: existing } = await supabase
+      .from('moment_requests')
+      .select('chat_id')
+      .eq('moment_id', req.moment_id)
+      .eq('status', 'accepted')
+      .not('chat_id', 'is', null)
+      .limit(1)
+      .maybeSingle()
 
-    if (e1 || !chat) { setActing(null); return }
+    let chatId: string
 
-    // 2. Add both participants
-    const { error: e2 } = await supabase.from('chat_participants').insert([
-      { chat_id: chat.id, user_id: userId },
-      { chat_id: chat.id, user_id: req.user_id },
-    ])
+    if (existing?.chat_id) {
+      // ── 2a. Chat exists — just add the new traveller ─────────────────────
+      chatId = existing.chat_id
+      const { error } = await supabase
+        .from('chat_participants')
+        .insert({ chat_id: chatId, user_id: req.user_id })
 
-    if (e2) { setActing(null); return }
+      if (error && error.code !== '23505') {
+        // 23505 = unique violation (user already in chat) — safe to ignore
+        setActing(null)
+        return
+      }
+    } else {
+      // ── 2b. No chat yet — create the group chat for this moment ──────────
+      const { data: chat, error: e1 } = await supabase
+        .from('chats')
+        .insert({ moment_id: req.moment_id })
+        .select('id')
+        .single()
 
-    // 3. Accept the request and store the chat_id so requesters can navigate to it
+      if (e1 || !chat) { setActing(null); return }
+
+      chatId = chat.id
+
+      // Add creator first, then the approved traveller
+      const { error: e2 } = await supabase
+        .from('chat_participants')
+        .insert([
+          { chat_id: chatId, user_id: userId },
+          { chat_id: chatId, user_id: req.user_id },
+        ])
+
+      if (e2) { setActing(null); return }
+    }
+
+    // ── 3. Mark request accepted and store the chat_id ───────────────────────
     await supabase
       .from('moment_requests')
-      .update({ status: 'accepted', chat_id: chat.id })
+      .update({ status: 'accepted', chat_id: chatId })
       .eq('id', req.id)
 
     setIncoming(prev => prev.filter(r => r.id !== req.id))

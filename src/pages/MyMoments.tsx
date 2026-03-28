@@ -10,7 +10,8 @@ interface MomentCard {
   start_date:    string | null
   end_date:      string | null
   activity_type: string
-  chatId?:       string | null  // only set for joined moments
+  status?:       string        // 'pending' | 'accepted' — only set for joined moments
+  chatId?:       string | null // only set for joined moments
 }
 
 interface Props {
@@ -40,6 +41,38 @@ function formatDateRange(start: string | null, end: string | null): string {
   return fmt(end!)
 }
 
+// ─── Status Badge ─────────────────────────────────────────────────────────────
+
+function StatusBadge({ status }: { status: string }) {
+  const isApproved = status === 'accepted'
+  return (
+    <span
+      className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+      style={
+        isApproved
+          ? { background: 'rgba(34,197,94,0.12)', color: '#16A34A' }
+          : { background: 'rgba(148,163,184,0.15)', color: '#64748B' }
+      }
+    >
+      {isApproved ? (
+        <>
+          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+          Approved
+        </>
+      ) : (
+        <>
+          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l2 2m6-2a10 10 0 11-20 0 10 10 0 0120 0z" />
+          </svg>
+          Pending
+        </>
+      )}
+    </span>
+  )
+}
+
 // ─── Moment Item ──────────────────────────────────────────────────────────────
 
 function MomentItem({
@@ -49,49 +82,67 @@ function MomentItem({
   moment:      MomentCard
   onOpenChat?: (chatId: string, name: string) => void
 }) {
-  const dateStr = formatDateRange(moment.start_date, moment.end_date)
-  const hasChatId = !!moment.chatId
+  const dateStr    = formatDateRange(moment.start_date, moment.end_date)
+  const isApproved = moment.status === 'accepted'
+  const chatActive = isApproved && !!moment.chatId
 
   return (
     <div className="rounded-2xl overflow-hidden"
       style={{
-        background: 'linear-gradient(145deg,rgba(253,242,248,0.9) 0%,rgba(239,246,255,0.9) 100%)',
-        border:     '1px solid rgba(226,232,240,0.7)',
-        boxShadow:  '0 2px 10px rgba(15,23,42,0.06)',
+        background: isApproved
+          ? 'linear-gradient(145deg, rgba(220,252,231,0.6) 0%, rgba(239,246,255,0.9) 100%)'
+          : 'linear-gradient(145deg, rgba(248,250,252,0.9) 0%, rgba(239,246,255,0.9) 100%)',
+        border:    `1px solid ${isApproved ? 'rgba(134,239,172,0.5)' : 'rgba(226,232,240,0.7)'}`,
+        boxShadow: '0 2px 10px rgba(15,23,42,0.06)',
       }}>
-      <div className="p-4 flex items-center gap-4">
-        {/* Activity icon bubble */}
-        <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 text-xl"
-          style={{ background: 'white', boxShadow: '0 1px 4px rgba(15,23,42,0.08)' }}>
-          {ACTIVITY_EMOJI[moment.activity_type] ?? '📍'}
+      <div className="p-4">
+        {/* Top row: icon + info + chat button */}
+        <div className="flex items-center gap-3">
+          {/* Activity icon bubble */}
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 text-xl"
+            style={{ background: 'white', boxShadow: '0 1px 4px rgba(15,23,42,0.08)' }}>
+            {ACTIVITY_EMOJI[moment.activity_type] ?? '📍'}
+          </div>
+
+          {/* Info */}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold truncate" style={{ color: '#0F172A' }}>
+              {moment.title}
+            </p>
+            <p className="text-xs mt-0.5 truncate" style={{ color: '#64748B' }}>
+              📍 {moment.destination}
+              {dateStr && <span style={{ color: '#94A3B8' }}> · {dateStr}</span>}
+            </p>
+          </div>
+
+          {/* Chat button or chevron */}
+          {onOpenChat !== undefined ? (
+            <button
+              type="button"
+              onClick={() => chatActive && onOpenChat(moment.chatId!, moment.title)}
+              disabled={!chatActive}
+              className="shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider focus:outline-none transition-colors"
+              style={
+                chatActive
+                  ? { background: 'rgba(29,78,216,0.10)', color: '#1D4ED8', cursor: 'pointer' }
+                  : { background: '#F1F5F9', color: '#CBD5E1', cursor: 'not-allowed' }
+              }
+            >
+              Chat
+            </button>
+          ) : (
+            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+              strokeWidth={2} style={{ color: '#CBD5E1' }}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          )}
         </div>
 
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold truncate" style={{ color: '#0F172A' }}>
-            {moment.title}
-          </p>
-          <p className="text-xs mt-0.5 truncate" style={{ color: '#64748B' }}>
-            📍 {moment.destination}
-            {dateStr && <span style={{ color: '#94A3B8' }}> · {dateStr}</span>}
-          </p>
-        </div>
-
-        {/* Chat button (joined tab only) or Chevron */}
-        {hasChatId && onOpenChat ? (
-          <button
-            type="button"
-            onClick={() => onOpenChat(moment.chatId!, moment.title)}
-            className="shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider focus:outline-none transition-colors"
-            style={{ background: 'rgba(29,78,216,0.10)', color: '#1D4ED8' }}
-          >
-            Chat
-          </button>
-        ) : (
-          <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-            strokeWidth={2} style={{ color: '#CBD5E1' }}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-          </svg>
+        {/* Status badge — only shown in joined tab (when status is set) */}
+        {moment.status && (
+          <div className="mt-2.5 pl-14">
+            <StatusBadge status={moment.status} />
+          </div>
         )}
       </div>
     </div>
@@ -122,15 +173,16 @@ export default function MyMoments({ userId, onOpenChat }: Props) {
     load()
   }, [userId])
 
-  // Fetch moments the user has joined (accepted request) — include chat_id
+  // Fetch all non-declined requests (pending + accepted) — include status and chat_id
   useEffect(() => {
     async function load() {
       setLoadingJoined(true)
       const { data: reqs } = await supabase
         .from('moment_requests')
-        .select('moment_id, chat_id')
+        .select('moment_id, status, chat_id')
         .eq('user_id', userId)
-        .eq('status', 'accepted')
+        .in('status', ['pending', 'accepted'])
+        .order('created_at', { ascending: false })
 
       if (!reqs || reqs.length === 0) {
         setJoinedMoments([])
@@ -138,20 +190,27 @@ export default function MyMoments({ userId, onOpenChat }: Props) {
         return
       }
 
-      // Build a momentId → chatId lookup
-      const chatByMoment = new Map(reqs.map(r => [r.moment_id, r.chat_id as string | null]))
+      // Build a momentId → { status, chatId } lookup
+      const reqByMoment = new Map(
+        reqs.map(r => [r.moment_id, { status: r.status as string, chatId: r.chat_id as string | null }])
+      )
       const ids = reqs.map(r => r.moment_id)
 
       const { data } = await supabase
         .from('moments')
         .select('id, title, destination, start_date, end_date, activity_type')
         .in('id', ids)
-        .order('created_at', { ascending: false })
 
-      const enriched = ((data as MomentCard[]) ?? []).map(m => ({
-        ...m,
-        chatId: chatByMoment.get(m.id) ?? null,
-      }))
+      // Preserve the request ordering (most recent first)
+      const momentById = new Map(((data as MomentCard[]) ?? []).map(m => [m.id, m]))
+      const enriched = ids
+        .map(id => {
+          const m = momentById.get(id)
+          if (!m) return null
+          const req = reqByMoment.get(id)!
+          return { ...m, status: req.status, chatId: req.chatId }
+        })
+        .filter(Boolean) as MomentCard[]
 
       setJoinedMoments(enriched)
       setLoadingJoined(false)
@@ -164,7 +223,7 @@ export default function MyMoments({ userId, onOpenChat }: Props) {
 
   const emptyText = activeTab === 'posts'
     ? { icon: '🗺️', title: 'No moments posted yet', sub: 'Tap + to create your first moment.' }
-    : { icon: '✈️', title: 'No trips joined yet',    sub: 'Browse the feed and tap "I\'m in" to join a moment.' }
+    : { icon: '✈️', title: 'No requests yet',    sub: 'Browse the feed and tap "Send Request" to join a moment.' }
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
