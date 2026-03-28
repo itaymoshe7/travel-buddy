@@ -20,9 +20,15 @@ interface MomentRow {
   } | null
 }
 
+interface RequestInfo {
+  status:  string        // 'pending' | 'accepted' | 'declined'
+  chatId:  string | null
+}
+
 interface Props {
   userId:          string
   onNotifications: () => void
+  onOpenChat:      (chatId: string, name: string) => void
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -116,21 +122,27 @@ function Avatar({ url, name }: { url: string | null; name: string | null }) {
 function MomentCard({
   moment,
   userId,
-  alreadyRequested,
+  requestInfo,
   onRequested,
   onToast,
+  onOpenChat,
 }: {
-  moment: MomentRow
-  userId: string
-  alreadyRequested: boolean
+  moment:      MomentRow
+  userId:      string
+  requestInfo: RequestInfo | null
   onRequested: (id: string) => void
-  onToast: (msg: string, kind: 'success' | 'error') => void
+  onToast:     (msg: string, kind: 'success' | 'error') => void
+  onOpenChat:  (chatId: string, name: string) => void
 }) {
   const [requesting, setRequesting] = useState(false)
-  const isOwn = moment.creator_id === userId
+  const isOwn    = moment.creator_id === userId
+  const status   = requestInfo?.status ?? null
+  const chatId   = requestInfo?.chatId ?? null
+  const isPending  = status === 'pending'
+  const isAccepted = status === 'accepted'
 
-  async function handleImIn() {
-    if (alreadyRequested || isOwn) return
+  async function handleSendRequest() {
+    if (status || isOwn) return
     setRequesting(true)
     const { error } = await supabase.from('moment_requests').insert({
       moment_id: moment.id,
@@ -156,10 +168,36 @@ function MomentCard({
       : gender === 'male'
         ? 'linear-gradient(145deg, #E0F7FA 0%, #FFFFFF 100%)'
         : 'linear-gradient(145deg, rgba(253,242,248,0.9) 0%, rgba(239,246,255,0.9) 100%)'
-  const imInColor =
+  const requestBtnColor =
     gender === 'female' ? '#F472B6'
     : gender === 'male' ? '#1D4ED8'
     : '#F472B6'
+
+  // Request button appearance
+  let requestBtnStyle: React.CSSProperties
+  let requestBtnLabel: string
+  if (isOwn) {
+    requestBtnStyle = { background: '#F1F5F9', color: '#94A3B8', cursor: 'not-allowed' }
+    requestBtnLabel = 'Your moment'
+  } else if (isAccepted) {
+    requestBtnStyle = { background: 'rgba(34,197,94,0.10)', color: '#16A34A', border: '1px solid rgba(34,197,94,0.25)', cursor: 'default' }
+    requestBtnLabel = '✓ Joined'
+  } else if (isPending) {
+    requestBtnStyle = { background: 'rgba(234,179,8,0.10)', color: '#B45309', border: '1px solid rgba(234,179,8,0.25)', cursor: 'default' }
+    requestBtnLabel = '⏳ Pending'
+  } else if (status === 'declined') {
+    requestBtnStyle = { background: '#F1F5F9', color: '#94A3B8', cursor: 'not-allowed' }
+    requestBtnLabel = 'Declined'
+  } else {
+    requestBtnStyle = { background: requestBtnColor, color: 'white' }
+    requestBtnLabel = requesting ? '…' : 'Send Request'
+  }
+
+  // Chat button — active only when accepted and chat exists
+  const chatActive = isAccepted && !!chatId
+  const chatBtnStyle: React.CSSProperties = chatActive
+    ? { background: 'rgba(29,78,216,0.10)', color: '#1D4ED8', cursor: 'pointer' }
+    : { background: '#F1F5F9', color: '#CBD5E1', cursor: 'not-allowed' }
 
   return (
     <div className="rounded-2xl overflow-hidden"
@@ -219,25 +257,20 @@ function MomentCard({
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={handleImIn}
-            disabled={requesting || alreadyRequested || isOwn}
+            onClick={handleSendRequest}
+            disabled={requesting || !!status || isOwn}
             className="flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all focus:outline-none"
-            style={
-              isOwn
-                ? { background: '#F1F5F9', color: '#94A3B8', cursor: 'not-allowed' }
-                : alreadyRequested
-                  ? { background: 'rgba(34,197,94,0.1)', color: '#16A34A', border: '1px solid rgba(34,197,94,0.25)', cursor: 'default' }
-                  : { background: imInColor, color: 'white' }
-            }
+            style={requestBtnStyle}
           >
-            {requesting ? '…' : isOwn ? 'Your moment' : alreadyRequested ? '✓ Sent' : "I'm in"}
+            {requestBtnLabel}
           </button>
 
           <button
             type="button"
-            onClick={() => onToast('Chat coming soon!', 'success')}
+            onClick={() => chatActive && onOpenChat(chatId!, creator?.full_name ?? 'Traveller')}
+            disabled={!chatActive}
             className="flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all focus:outline-none"
-            style={{ background: 'rgba(29,78,216,0.08)', color: '#1D4ED8' }}
+            style={chatBtnStyle}
           >
             Chat
           </button>
@@ -249,11 +282,12 @@ function MomentCard({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function ExplorePage({ userId, onNotifications }: Props) {
+export default function ExplorePage({ userId, onNotifications, onOpenChat }: Props) {
   const [moments,      setMoments]      = useState<MomentRow[]>([])
   const [loading,      setLoading]      = useState(true)
   const [error,        setError]        = useState<string | null>(null)
-  const [requested,    setRequested]    = useState<Set<string>>(new Set())
+  // momentId → { status, chatId }
+  const [requestMap,   setRequestMap]   = useState<Map<string, RequestInfo>>(new Map())
   const [toasts,       setToasts]       = useState<ToastState[]>([])
   const [activeFilter, setActiveFilter] = useState<FilterId>('all')
   const [pendingCount, setPendingCount] = useState(0)
@@ -299,10 +333,16 @@ export default function ExplorePage({ userId, onNotifications }: Props) {
 
       const { data: reqs } = await supabase
         .from('moment_requests')
-        .select('moment_id')
+        .select('moment_id, status, chat_id')
         .eq('user_id', userId)
 
-      if (reqs) setRequested(new Set(reqs.map(r => r.moment_id)))
+      if (reqs) {
+        const map = new Map<string, RequestInfo>()
+        for (const r of reqs) {
+          map.set(r.moment_id, { status: r.status, chatId: r.chat_id ?? null })
+        }
+        setRequestMap(map)
+      }
 
       // Pending join requests on moments I created → drives the bell badge
       const { data: myMoments } = await supabase
@@ -451,9 +491,14 @@ export default function ExplorePage({ userId, onNotifications }: Props) {
                 key={moment.id}
                 moment={moment}
                 userId={userId}
-                alreadyRequested={requested.has(moment.id)}
-                onRequested={id => setRequested(prev => new Set([...prev, id]))}
+                requestInfo={requestMap.get(moment.id) ?? null}
+                onRequested={id => setRequestMap(prev => {
+                  const next = new Map(prev)
+                  next.set(id, { status: 'pending', chatId: null })
+                  return next
+                })}
                 onToast={pushToast}
+                onOpenChat={onOpenChat}
               />
             ))}
           </div>

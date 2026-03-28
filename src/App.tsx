@@ -108,7 +108,11 @@ export default function App() {
       <NotificationsPage
         userId={userId!}
         onBack={() => setPage('explore')}
-        onGoToChat={() => setPage('chats')}
+        onOpenChat={(id, name) => {
+          setChatId(id)
+          setChatPartner(name)
+          setPage('chat-room')
+        }}
       />
     )
   }
@@ -132,11 +136,23 @@ export default function App() {
         <ExplorePage
           userId={userId!}
           onNotifications={() => setPage('notifications')}
+          onOpenChat={(id, name) => {
+            setChatId(id)
+            setChatPartner(name)
+            setPage('chat-room')
+          }}
         />
       )}
 
       {page === 'my-moments' && (
-        <MyMoments userId={userId!} />
+        <MyMoments
+          userId={userId!}
+          onOpenChat={(id, name) => {
+            setChatId(id)
+            setChatPartner(name)
+            setPage('chat-room')
+          }}
+        />
       )}
 
       {page === 'chats' && (

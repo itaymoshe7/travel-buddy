@@ -16,6 +16,7 @@ interface FormState {
   startDate: string
   endDate: string
   activityType: ActivityType | null
+  spots: number
   description: string
 }
 
@@ -40,6 +41,7 @@ export default function CreateMoment({ userId, onComplete, onBack }: Props) {
     startDate: '',
     endDate: '',
     activityType: null,
+    spots: 4,
     description: '',
   })
   const [errors, setErrors] = useState<FormErrors>({})
@@ -77,6 +79,7 @@ export default function CreateMoment({ userId, onComplete, onBack }: Props) {
       start_date:    form.startDate,
       end_date:      form.endDate,
       activity_type: form.activityType,
+      total_spots:   form.spots,
       description:   form.description.trim() || null,
     })
 
@@ -213,6 +216,35 @@ export default function CreateMoment({ userId, onComplete, onBack }: Props) {
             {errors.activityType && (
               <p className="text-xs text-red-500 mt-1.5">{errors.activityType}</p>
             )}
+          </div>
+
+          {/* Spots stepper */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+              How many buddies needed?
+            </label>
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => set('spots', Math.max(1, form.spots - 1))}
+                className="w-10 h-10 rounded-full border border-slate-200 bg-white text-xl font-bold text-slate-500 hover:border-primary hover:text-primary active:bg-blue-50 transition-colors focus:outline-none flex items-center justify-center"
+                aria-label="Decrease spots"
+              >
+                −
+              </button>
+              <span className="w-8 text-center text-lg font-bold text-text-main tabular-nums">
+                {form.spots}
+              </span>
+              <button
+                type="button"
+                onClick={() => set('spots', Math.min(10, form.spots + 1))}
+                className="w-10 h-10 rounded-full border border-slate-200 bg-white text-xl font-bold text-slate-500 hover:border-primary hover:text-primary active:bg-blue-50 transition-colors focus:outline-none flex items-center justify-center"
+                aria-label="Increase spots"
+              >
+                +
+              </button>
+              <span className="text-xs text-slate-400">spots (1–10)</span>
+            </div>
           </div>
 
           {/* Description */}

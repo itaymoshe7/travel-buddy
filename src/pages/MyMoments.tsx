@@ -10,10 +10,12 @@ interface MomentCard {
   start_date:    string | null
   end_date:      string | null
   activity_type: string
+  chatId?:       string | null  // only set for joined moments
 }
 
 interface Props {
-  userId: string
+  userId:     string
+  onOpenChat: (chatId: string, name: string) => void
 }
 
 type Tab = 'posts' | 'joined'
@@ -40,44 +42,65 @@ function formatDateRange(start: string | null, end: string | null): string {
 
 // ─── Moment Item ──────────────────────────────────────────────────────────────
 
-function MomentItem({ moment }: { moment: MomentCard }) {
+function MomentItem({
+  moment,
+  onOpenChat,
+}: {
+  moment:      MomentCard
+  onOpenChat?: (chatId: string, name: string) => void
+}) {
   const dateStr = formatDateRange(moment.start_date, moment.end_date)
+  const hasChatId = !!moment.chatId
+
   return (
-    <div className="rounded-2xl p-4 flex items-center gap-4"
+    <div className="rounded-2xl overflow-hidden"
       style={{
         background: 'linear-gradient(145deg,rgba(253,242,248,0.9) 0%,rgba(239,246,255,0.9) 100%)',
         border:     '1px solid rgba(226,232,240,0.7)',
         boxShadow:  '0 2px 10px rgba(15,23,42,0.06)',
       }}>
-      {/* Activity icon bubble */}
-      <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 text-xl"
-        style={{ background: 'white', boxShadow: '0 1px 4px rgba(15,23,42,0.08)' }}>
-        {ACTIVITY_EMOJI[moment.activity_type] ?? '📍'}
-      </div>
+      <div className="p-4 flex items-center gap-4">
+        {/* Activity icon bubble */}
+        <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 text-xl"
+          style={{ background: 'white', boxShadow: '0 1px 4px rgba(15,23,42,0.08)' }}>
+          {ACTIVITY_EMOJI[moment.activity_type] ?? '📍'}
+        </div>
 
-      {/* Info */}
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold truncate" style={{ color: '#0F172A' }}>
-          {moment.title}
-        </p>
-        <p className="text-xs mt-0.5 truncate" style={{ color: '#64748B' }}>
-          📍 {moment.destination}
-          {dateStr && <span style={{ color: '#94A3B8' }}> · {dateStr}</span>}
-        </p>
-      </div>
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold truncate" style={{ color: '#0F172A' }}>
+            {moment.title}
+          </p>
+          <p className="text-xs mt-0.5 truncate" style={{ color: '#64748B' }}>
+            📍 {moment.destination}
+            {dateStr && <span style={{ color: '#94A3B8' }}> · {dateStr}</span>}
+          </p>
+        </div>
 
-      {/* Chevron */}
-      <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-        strokeWidth={2} style={{ color: '#CBD5E1' }}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-      </svg>
+        {/* Chat button (joined tab only) or Chevron */}
+        {hasChatId && onOpenChat ? (
+          <button
+            type="button"
+            onClick={() => onOpenChat(moment.chatId!, moment.title)}
+            className="shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider focus:outline-none transition-colors"
+            style={{ background: 'rgba(29,78,216,0.10)', color: '#1D4ED8' }}
+          >
+            Chat
+          </button>
+        ) : (
+          <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+            strokeWidth={2} style={{ color: '#CBD5E1' }}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        )}
+      </div>
     </div>
   )
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function MyMoments({ userId }: Props) {
+export default function MyMoments({ userId, onOpenChat }: Props) {
   const [activeTab,    setActiveTab]    = useState<Tab>('posts')
   const [myPosts,      setMyPosts]      = useState<MomentCard[]>([])
   const [joinedMoments, setJoinedMoments] = useState<MomentCard[]>([])
@@ -99,13 +122,13 @@ export default function MyMoments({ userId }: Props) {
     load()
   }, [userId])
 
-  // Fetch moments the user has joined (accepted request)
+  // Fetch moments the user has joined (accepted request) — include chat_id
   useEffect(() => {
     async function load() {
       setLoadingJoined(true)
       const { data: reqs } = await supabase
         .from('moment_requests')
-        .select('moment_id')
+        .select('moment_id, chat_id')
         .eq('user_id', userId)
         .eq('status', 'accepted')
 
@@ -115,14 +138,22 @@ export default function MyMoments({ userId }: Props) {
         return
       }
 
+      // Build a momentId → chatId lookup
+      const chatByMoment = new Map(reqs.map(r => [r.moment_id, r.chat_id as string | null]))
       const ids = reqs.map(r => r.moment_id)
+
       const { data } = await supabase
         .from('moments')
         .select('id, title, destination, start_date, end_date, activity_type')
         .in('id', ids)
         .order('created_at', { ascending: false })
 
-      setJoinedMoments((data as MomentCard[]) ?? [])
+      const enriched = ((data as MomentCard[]) ?? []).map(m => ({
+        ...m,
+        chatId: chatByMoment.get(m.id) ?? null,
+      }))
+
+      setJoinedMoments(enriched)
       setLoadingJoined(false)
     }
     load()
@@ -210,7 +241,13 @@ export default function MyMoments({ userId }: Props) {
         {/* List */}
         {!loading && items.length > 0 && (
           <div className="flex flex-col gap-3">
-            {items.map(m => <MomentItem key={m.id} moment={m} />)}
+            {items.map(m => (
+              <MomentItem
+                key={m.id}
+                moment={m}
+                onOpenChat={activeTab === 'joined' ? onOpenChat : undefined}
+              />
+            ))}
           </div>
         )}
       </div>

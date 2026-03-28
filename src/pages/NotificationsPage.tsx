@@ -14,6 +14,7 @@ interface IncomingRequest {
 interface ApprovedAlert {
   id:        string
   moment_id: string
+  chat_id:   string | null
   moments: {
     title:    string
     profiles: { full_name: string | null; avatar_url: string | null } | null
@@ -21,9 +22,9 @@ interface ApprovedAlert {
 }
 
 interface Props {
-  userId:     string
-  onBack:     () => void
-  onGoToChat: () => void
+  userId:      string
+  onBack:      () => void
+  onOpenChat:  (chatId: string, name: string) => void
 }
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
@@ -55,7 +56,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function NotificationsPage({ userId, onBack, onGoToChat }: Props) {
+export default function NotificationsPage({ userId, onBack, onOpenChat }: Props) {
   const [incoming, setIncoming] = useState<IncomingRequest[]>([])
   const [approved, setApproved] = useState<ApprovedAlert[]>([])
   const [loading,  setLoading]  = useState(true)
@@ -87,7 +88,7 @@ export default function NotificationsPage({ userId, onBack, onGoToChat }: Props)
       // ── 2. Approved: MY requests that got accepted ─────────────────────────
       supabase
         .from('moment_requests')
-        .select('id, moment_id, moments!moment_id(title, profiles!creator_id(full_name, avatar_url))')
+        .select('id, moment_id, chat_id, moments!moment_id(title, profiles!creator_id(full_name, avatar_url))')
         .eq('user_id', userId)
         .eq('status', 'accepted')
         .order('created_at', { ascending: false }),
@@ -101,22 +102,25 @@ export default function NotificationsPage({ userId, onBack, onGoToChat }: Props)
   async function handleApprove(req: IncomingRequest) {
     setActing(req.id)
 
-    const { error: e1 } = await supabase
-      .from('moment_requests')
-      .update({ status: 'accepted' })
-      .eq('id', req.id)
-
-    if (e1) { setActing(null); return }
-
-    const { data: chat, error: e2 } = await supabase
+    // 1. Create the chat room
+    const { data: chat, error: e1 } = await supabase
       .from('chats').insert({}).select('id').single()
 
-    if (e2 || !chat) { setActing(null); return }
+    if (e1 || !chat) { setActing(null); return }
 
-    await supabase.from('chat_participants').insert([
+    // 2. Add both participants
+    const { error: e2 } = await supabase.from('chat_participants').insert([
       { chat_id: chat.id, user_id: userId },
       { chat_id: chat.id, user_id: req.user_id },
     ])
+
+    if (e2) { setActing(null); return }
+
+    // 3. Accept the request and store the chat_id so requesters can navigate to it
+    await supabase
+      .from('moment_requests')
+      .update({ status: 'accepted', chat_id: chat.id })
+      .eq('id', req.id)
 
     setIncoming(prev => prev.filter(r => r.id !== req.id))
     setActing(null)
@@ -276,11 +280,20 @@ export default function NotificationsPage({ userId, onBack, onGoToChat }: Props)
                     </div>
                     <button
                       type="button"
-                      onClick={onGoToChat}
+                      onClick={() => {
+                        if (alert.chat_id) {
+                          onOpenChat(alert.chat_id, creatorName)
+                        }
+                      }}
+                      disabled={!alert.chat_id}
                       className="w-full py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors focus:outline-none"
-                      style={{ background: 'rgba(29,78,216,0.08)', color: '#1D4ED8' }}
+                      style={{
+                        background: alert.chat_id ? 'rgba(29,78,216,0.08)' : '#F1F5F9',
+                        color:      alert.chat_id ? '#1D4ED8' : '#94A3B8',
+                        cursor:     alert.chat_id ? 'pointer' : 'default',
+                      }}
                     >
-                      Go to Chat →
+                      {alert.chat_id ? 'Open Chat →' : 'Chat not yet available'}
                     </button>
                   </div>
                 )
