@@ -65,6 +65,7 @@ export default function App() {
     return (
       <RegisterStep1
         onNext={(id, link) => { setUserId(id); setSocialLink(link); setPage('step2') }}
+        onSignIn={() => setPage('login')}
       />
     )
   }

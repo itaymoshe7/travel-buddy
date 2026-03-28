@@ -18,10 +18,11 @@ interface FormErrors {
 }
 
 interface Props {
-  onNext: (userId: string, socialLink: string) => void
+  onNext:    (userId: string, socialLink: string) => void
+  onSignIn:  () => void
 }
 
-export default function RegisterStep1({ onNext }: Props) {
+export default function RegisterStep1({ onNext, onSignIn }: Props) {
   const [form, setForm] = useState<FormState>({
     fullName:   '',
     email:      '',
@@ -206,7 +207,11 @@ export default function RegisterStep1({ onNext }: Props) {
 
         <p className="text-center text-xs mt-4" style={{ color: '#94A3B8' }}>
           Already have an account?{' '}
-          <a href="#" className="font-semibold" style={{ color: '#1D4ED8' }}>Sign in</a>
+          <button type="button" onClick={onSignIn}
+            className="font-semibold focus:outline-none"
+            style={{ color: '#1D4ED8', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
+            Sign in
+          </button>
         </p>
 
       </div>
