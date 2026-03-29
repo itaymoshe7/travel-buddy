@@ -26,6 +26,11 @@ interface RequestInfo {
   chatId:  string | null
 }
 
+interface Participant {
+  full_name:  string | null
+  avatar_url: string | null
+}
+
 interface Props {
   userId:          string
   onNotifications: () => void
@@ -112,6 +117,66 @@ function Avatar({ url, name }: { url: string | null; name: string | null }) {
   )
 }
 
+// ─── Participant Avatars ──────────────────────────────────────────────────────
+
+const MAX_SHOWN = 3
+
+function ParticipantAvatars({ participants }: { participants: Participant[] }) {
+  if (participants.length === 0) return null
+  const shown  = participants.slice(0, MAX_SHOWN)
+  const extra  = participants.length - MAX_SHOWN
+
+  return (
+    <div className="flex items-center gap-1.5 mt-3">
+      {/* Overlapping mini-avatars */}
+      <div className="flex items-center">
+        {shown.map((p, i) => (
+          <div key={i} className="rounded-full overflow-hidden shrink-0"
+            style={{
+              width: 22, height: 22,
+              border: '1.5px solid white',
+              boxShadow: '0 1px 3px rgba(15,23,42,0.12)',
+              marginLeft: i === 0 ? 0 : -6,
+              zIndex: shown.length - i,
+              position: 'relative',
+            }}>
+            {p.avatar_url ? (
+              <img src={p.avatar_url} alt={p.full_name ?? ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <div style={{
+                width: '100%', height: '100%',
+                background: 'linear-gradient(135deg,#EFF6FF,#DBEAFE)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 8, fontWeight: 700, color: '#1D4ED8',
+              }}>
+                {initials(p.full_name)}
+              </div>
+            )}
+          </div>
+        ))}
+        {extra > 0 && (
+          <div style={{
+            width: 22, height: 22,
+            borderRadius: '50%',
+            border: '1.5px solid white',
+            background: '#E2E8F0',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 8, fontWeight: 700, color: '#64748B',
+            marginLeft: -6, position: 'relative', zIndex: 0,
+          }}>
+            +{extra}
+          </div>
+        )}
+      </div>
+      <p className="text-[11px]" style={{ color: '#94A3B8' }}>
+        {participants.length === 1
+          ? `${participants[0].full_name ?? 'Someone'} joined`
+          : `${participants.length} travellers joined`}
+      </p>
+    </div>
+  )
+}
+
 // ─── Moment Card ──────────────────────────────────────────────────────────────
 
 function MomentCard({
@@ -119,6 +184,7 @@ function MomentCard({
   userId,
   requestInfo,
   acceptedCount,
+  participants,
   onRequested,
   onToast,
   onOpenChat,
@@ -127,6 +193,7 @@ function MomentCard({
   userId:        string
   requestInfo:   RequestInfo | null
   acceptedCount: number
+  participants:  Participant[]
   onRequested:   (id: string) => void
   onToast:       (msg: string, kind: 'success' | 'error') => void
   onOpenChat:    (chatId: string, name: string) => void
@@ -272,8 +339,11 @@ function MomentCard({
           </div>
         </div>
 
+        {/* Participant avatars — social proof */}
+        <ParticipantAvatars participants={participants} />
+
         {/* Bottom: action buttons */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 mt-4">
           <button
             type="button"
             onClick={handleSendRequest}
@@ -308,7 +378,9 @@ export default function ExplorePage({ userId, onNotifications, onOpenChat }: Pro
   // momentId → { status, chatId } — tracks request state per moment
   const [requestMap,       setRequestMap]      = useState<Map<string, RequestInfo>>(new Map())
   // momentId → accepted count (bypasses RLS via SECURITY DEFINER RPC)
-  const [acceptedCountMap, setAcceptedCountMap] = useState<Map<string, number>>(new Map())
+  const [acceptedCountMap,  setAcceptedCountMap]  = useState<Map<string, number>>(new Map())
+  // momentId → accepted participant profiles for avatar row
+  const [participantsMap,   setParticipantsMap]   = useState<Map<string, Participant[]>>(new Map())
   const [toasts,           setToasts]          = useState<ToastState[]>([])
   const [activeFilter,     setActiveFilter]    = useState<FilterId>('all')
   const [pendingCount,     setPendingCount]    = useState(0)
@@ -353,16 +425,28 @@ export default function ExplorePage({ userId, onNotifications, onOpenChat }: Pro
         const rows = (data as unknown as MomentRow[]) ?? []
         setMoments(rows)
 
-        // Fetch accepted counts for all loaded moments via SECURITY DEFINER RPC
+        // Fetch accepted counts + participant profiles via SECURITY DEFINER RPCs
         if (rows.length > 0) {
           const ids = rows.map(m => m.id)
-          const { data: counts } = await supabase.rpc('get_accepted_counts', { moment_ids: ids })
+          const [{ data: counts }, { data: parts }] = await Promise.all([
+            supabase.rpc('get_accepted_counts',      { moment_ids: ids }),
+            supabase.rpc('get_accepted_participants', { moment_ids: ids }),
+          ])
           if (counts) {
             const countMap = new Map<string, number>()
             for (const c of counts as { moment_id: string; accepted_count: number }[]) {
               countMap.set(c.moment_id, Number(c.accepted_count))
             }
             setAcceptedCountMap(countMap)
+          }
+          if (parts) {
+            const pMap = new Map<string, Participant[]>()
+            for (const p of parts as { moment_id: string; full_name: string | null; avatar_url: string | null }[]) {
+              const list = pMap.get(p.moment_id) ?? []
+              list.push({ full_name: p.full_name, avatar_url: p.avatar_url })
+              pMap.set(p.moment_id, list)
+            }
+            setParticipantsMap(pMap)
           }
         }
       }
@@ -529,6 +613,7 @@ export default function ExplorePage({ userId, onNotifications, onOpenChat }: Pro
                 userId={userId}
                 requestInfo={requestMap.get(moment.id) ?? null}
                 acceptedCount={acceptedCountMap.get(moment.id) ?? 0}
+                participants={participantsMap.get(moment.id) ?? []}
                 onRequested={id => setRequestMap(prev => {
                   const next = new Map(prev)
                   next.set(id, { status: 'pending', chatId: null })
