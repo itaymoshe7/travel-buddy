@@ -11,6 +11,7 @@ interface MomentRow {
   end_date: string | null
   activity_type: string
   creator_id: string
+  total_spots: number
   profiles: {
     full_name:   string | null
     avatar_url:  string | null
@@ -38,12 +39,6 @@ const ACTIVITY_EMOJI: Record<string, string> = {
   stay:      '🏨',
   trip:      '🥾',
   nightlife: '🍻',
-}
-
-// Rough spots-left badge derived from a hash of the moment id (stable per card)
-function spotsLeft(id: string): number {
-  const n = id.charCodeAt(0) + id.charCodeAt(id.length - 1)
-  return (n % 4) + 1   // 1–4
 }
 
 type FilterId = 'all' | 'stay' | 'trip' | 'landing'
@@ -123,26 +118,30 @@ function MomentCard({
   moment,
   userId,
   requestInfo,
+  acceptedCount,
   onRequested,
   onToast,
   onOpenChat,
 }: {
-  moment:      MomentRow
-  userId:      string
-  requestInfo: RequestInfo | null
-  onRequested: (id: string) => void
-  onToast:     (msg: string, kind: 'success' | 'error') => void
-  onOpenChat:  (chatId: string, name: string) => void
+  moment:        MomentRow
+  userId:        string
+  requestInfo:   RequestInfo | null
+  acceptedCount: number
+  onRequested:   (id: string) => void
+  onToast:       (msg: string, kind: 'success' | 'error') => void
+  onOpenChat:    (chatId: string, name: string) => void
 }) {
   const [requesting, setRequesting] = useState(false)
   const [chatting,   setChatting]   = useState(false)
-  const isOwn    = moment.creator_id === userId
-  const status   = requestInfo?.status ?? null
+  const isOwn      = moment.creator_id === userId
+  const status     = requestInfo?.status ?? null
   const isPending  = status === 'pending'
   const isAccepted = status === 'accepted'
+  const spotsLeft  = moment.total_spots - acceptedCount
+  const isFull     = spotsLeft <= 0
 
   async function handleSendRequest() {
-    if (status || isOwn) return
+    if (status || isOwn || isFull) return
     setRequesting(true)
     const { error } = await supabase.from('moment_requests').insert({
       moment_id: moment.id,
@@ -159,7 +158,6 @@ function MomentCard({
 
   const creator = moment.profiles
   const dateStr = formatDateRange(moment.start_date, moment.end_date)
-  const spots   = spotsLeft(moment.id)
 
   const gender = creator?.gender ?? null
   const cardBg =
@@ -181,13 +179,16 @@ function MomentCard({
     requestBtnLabel = 'Your moment'
   } else if (isAccepted) {
     requestBtnStyle = { background: 'rgba(34,197,94,0.10)', color: '#16A34A', border: '1px solid rgba(34,197,94,0.25)', cursor: 'default' }
-    requestBtnLabel = '✓ Joined'
+    requestBtnLabel = '✓ Approved'
   } else if (isPending) {
     requestBtnStyle = { background: 'rgba(234,179,8,0.10)', color: '#B45309', border: '1px solid rgba(234,179,8,0.25)', cursor: 'default' }
     requestBtnLabel = '⏳ Pending'
   } else if (status === 'declined') {
     requestBtnStyle = { background: '#F1F5F9', color: '#94A3B8', cursor: 'not-allowed' }
     requestBtnLabel = 'Declined'
+  } else if (isFull) {
+    requestBtnStyle = { background: '#F1F5F9', color: '#94A3B8', cursor: 'not-allowed' }
+    requestBtnLabel = 'Full'
   } else {
     requestBtnStyle = { background: requestBtnColor, color: 'white' }
     requestBtnLabel = requesting ? '…' : 'Send Request'
@@ -263,8 +264,10 @@ function MomentCard({
             </p>
             {/* Spots left badge */}
             <span className="shrink-0 text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
-              style={{ background: 'rgba(244,114,182,0.12)', color: '#BE185D' }}>
-              {spots} spot{spots !== 1 ? 's' : ''} left
+              style={isFull
+                ? { background: 'rgba(239,68,68,0.10)', color: '#DC2626' }
+                : { background: 'rgba(244,114,182,0.12)', color: '#BE185D' }}>
+              {isFull ? 'Full' : `${spotsLeft} spot${spotsLeft !== 1 ? 's' : ''} left`}
             </span>
           </div>
         </div>
@@ -274,7 +277,7 @@ function MomentCard({
           <button
             type="button"
             onClick={handleSendRequest}
-            disabled={requesting || !!status || isOwn}
+            disabled={requesting || !!status || isOwn || isFull}
             className="flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all focus:outline-none"
             style={requestBtnStyle}
           >
@@ -299,14 +302,16 @@ function MomentCard({
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function ExplorePage({ userId, onNotifications, onOpenChat }: Props) {
-  const [moments,         setMoments]        = useState<MomentRow[]>([])
-  const [loading,         setLoading]        = useState(true)
-  const [error,           setError]          = useState<string | null>(null)
+  const [moments,          setMoments]         = useState<MomentRow[]>([])
+  const [loading,          setLoading]         = useState(true)
+  const [error,            setError]           = useState<string | null>(null)
   // momentId → { status, chatId } — tracks request state per moment
-  const [requestMap,   setRequestMap]   = useState<Map<string, RequestInfo>>(new Map())
-  const [toasts,          setToasts]         = useState<ToastState[]>([])
-  const [activeFilter,    setActiveFilter]   = useState<FilterId>('all')
-  const [pendingCount,    setPendingCount]   = useState(0)
+  const [requestMap,       setRequestMap]      = useState<Map<string, RequestInfo>>(new Map())
+  // momentId → accepted count (bypasses RLS via SECURITY DEFINER RPC)
+  const [acceptedCountMap, setAcceptedCountMap] = useState<Map<string, number>>(new Map())
+  const [toasts,           setToasts]          = useState<ToastState[]>([])
+  const [activeFilter,     setActiveFilter]    = useState<FilterId>('all')
+  const [pendingCount,     setPendingCount]    = useState(0)
   const toastCounter = useRef(0)
 
   function pushToast(message: string, kind: 'success' | 'error') {
@@ -330,6 +335,7 @@ export default function ExplorePage({ userId, onNotifications, onOpenChat }: Pro
           end_date,
           activity_type,
           creator_id,
+          total_spots,
           profiles!creator_id (
             full_name,
             avatar_url,
@@ -344,7 +350,21 @@ export default function ExplorePage({ userId, onNotifications, onOpenChat }: Pro
       if (fetchError) {
         setError(fetchError.message)
       } else {
-        setMoments((data as unknown as MomentRow[]) ?? [])
+        const rows = (data as unknown as MomentRow[]) ?? []
+        setMoments(rows)
+
+        // Fetch accepted counts for all loaded moments via SECURITY DEFINER RPC
+        if (rows.length > 0) {
+          const ids = rows.map(m => m.id)
+          const { data: counts } = await supabase.rpc('get_accepted_counts', { moment_ids: ids })
+          if (counts) {
+            const countMap = new Map<string, number>()
+            for (const c of counts as { moment_id: string; accepted_count: number }[]) {
+              countMap.set(c.moment_id, Number(c.accepted_count))
+            }
+            setAcceptedCountMap(countMap)
+          }
+        }
       }
 
       const { data: reqs } = await supabase
@@ -508,6 +528,7 @@ export default function ExplorePage({ userId, onNotifications, onOpenChat }: Pro
                 moment={moment}
                 userId={userId}
                 requestInfo={requestMap.get(moment.id) ?? null}
+                acceptedCount={acceptedCountMap.get(moment.id) ?? 0}
                 onRequested={id => setRequestMap(prev => {
                   const next = new Map(prev)
                   next.set(id, { status: 'pending', chatId: null })
