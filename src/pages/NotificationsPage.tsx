@@ -57,10 +57,11 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function NotificationsPage({ userId, onBack, onOpenChat }: Props) {
-  const [incoming, setIncoming] = useState<IncomingRequest[]>([])
-  const [approved, setApproved] = useState<ApprovedAlert[]>([])
-  const [loading,  setLoading]  = useState(true)
-  const [acting,   setActing]   = useState<string | null>(null)
+  const [incoming,   setIncoming] = useState<IncomingRequest[]>([])
+  const [approved,   setApproved] = useState<ApprovedAlert[]>([])
+  const [loading,    setLoading]  = useState(true)
+  const [acting,     setActing]   = useState<string | null>(null)
+  const [actionErr,  setActionErr] = useState<string | null>(null)
 
   useEffect(() => { load() }, [userId])
 
@@ -101,69 +102,39 @@ export default function NotificationsPage({ userId, onBack, onOpenChat }: Props)
 
   async function handleApprove(req: IncomingRequest) {
     setActing(req.id)
+    setActionErr(null)
 
-    // ── 1. Does a group chat for this moment already exist? ──────────────────
-    // Query via moment_requests (the creator can read requests on their own
-    // moments per RLS) to find any previously created chat_id for this moment.
-    const { data: existing } = await supabase
-      .from('moment_requests')
-      .select('chat_id')
-      .eq('moment_id', req.moment_id)
-      .eq('status', 'accepted')
-      .not('chat_id', 'is', null)
-      .limit(1)
-      .maybeSingle()
+    // Single atomic RPC — creates/reuses group chat + marks request accepted
+    const { error } = await supabase.rpc('approve_moment_request', {
+      request_id: req.id,
+    })
 
-    let chatId: string
-
-    if (existing?.chat_id) {
-      // ── 2a. Chat exists — just add the new traveller ─────────────────────
-      chatId = existing.chat_id
-      const { error } = await supabase
-        .from('chat_participants')
-        .insert({ chat_id: chatId, user_id: req.user_id })
-
-      if (error && error.code !== '23505') {
-        // 23505 = unique violation (user already in chat) — safe to ignore
-        setActing(null)
-        return
-      }
-    } else {
-      // ── 2b. No chat yet — create the group chat for this moment ──────────
-      const { data: chat, error: e1 } = await supabase
-        .from('chats')
-        .insert({ moment_id: req.moment_id })
-        .select('id')
-        .single()
-
-      if (e1 || !chat) { setActing(null); return }
-
-      chatId = chat.id
-
-      // Add creator first, then the approved traveller
-      const { error: e2 } = await supabase
-        .from('chat_participants')
-        .insert([
-          { chat_id: chatId, user_id: userId },
-          { chat_id: chatId, user_id: req.user_id },
-        ])
-
-      if (e2) { setActing(null); return }
+    if (error) {
+      setActionErr(`Could not approve: ${error.message}`)
+      setActing(null)
+      return
     }
 
-    // ── 3. Mark request accepted and store the chat_id ───────────────────────
-    await supabase
-      .from('moment_requests')
-      .update({ status: 'accepted', chat_id: chatId })
-      .eq('id', req.id)
-
+    // Remove the card immediately; the requester's "Approvals" section will
+    // appear on their next visit (or a page reload).
     setIncoming(prev => prev.filter(r => r.id !== req.id))
     setActing(null)
   }
 
   async function handleDecline(req: IncomingRequest) {
     setActing(req.id)
-    await supabase.from('moment_requests').update({ status: 'declined' }).eq('id', req.id)
+    setActionErr(null)
+
+    const { error } = await supabase.rpc('decline_moment_request', {
+      request_id: req.id,
+    })
+
+    if (error) {
+      setActionErr(`Could not decline: ${error.message}`)
+      setActing(null)
+      return
+    }
+
     setIncoming(prev => prev.filter(r => r.id !== req.id))
     setActing(null)
   }
@@ -233,6 +204,17 @@ export default function NotificationsPage({ userId, onBack, onOpenChat }: Props)
             <p className="text-sm" style={{ color: '#64748B' }}>
               You'll see join requests and approvals here.
             </p>
+          </div>
+        )}
+
+        {/* Action error banner */}
+        {actionErr && (
+          <div className="mb-4 px-4 py-3 rounded-xl flex items-center justify-between gap-3"
+            style={{ background: '#FEF2F2', border: '1px solid #FECACA' }}>
+            <p className="text-xs" style={{ color: '#DC2626' }}>{actionErr}</p>
+            <button type="button" onClick={() => setActionErr(null)}
+              className="shrink-0 text-xs font-semibold focus:outline-none"
+              style={{ color: '#DC2626' }}>✕</button>
           </div>
         )}
 
