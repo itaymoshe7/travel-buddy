@@ -4,7 +4,7 @@ import WelcomeScreen  from './pages/WelcomeScreen'
 import LoginForm      from './pages/LoginForm'
 import RegisterStep1  from './pages/RegisterStep1'
 import RegisterStep2  from './pages/RegisterStep2'
-import RegisterStep3  from './pages/RegisterStep3'
+import RegisterStep3  from './pages/RegisterStep3'  // bio + vibe (optional last step)
 import ExplorePage    from './pages/ExplorePage'
 import CreateMoment   from './pages/CreateMoment'
 import MyMoments      from './pages/MyMoments'
@@ -16,7 +16,7 @@ import BottomNav from './components/BottomNav'
 import type { NavTab } from './components/BottomNav'
 
 type Page =
-  | 'welcome' | 'login' | 'step1' | 'step2' | 'step3'  // unauthenticated / onboarding
+  | 'welcome' | 'login' | 'step1' | 'step2' | 'step3'  // unauthenticated / onboarding (step3 = bio+vibe)
   | 'explore' | 'create'                                 // explore flow
   | 'my-moments'                                         // moments tab
   | 'chats' | 'chat-room'                                // chat flow
@@ -128,6 +128,7 @@ export default function App() {
     )
   }
 
+  // Step3: optional bio + travel vibe — shown after step2, leads to explore
   if (page === 'step3') {
     return (
       <RegisterStep3

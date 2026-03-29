@@ -67,12 +67,11 @@ export default function RegisterStep2({ userId, socialLink, onNext }: Props) {
       <div className="w-full max-w-sm rounded-2xl p-8"
         style={{ background: 'white', boxShadow: '0 4px 24px rgba(15,23,42,0.08)' }}>
 
-        {/* Step indicator — 2 / 3 */}
+        {/* Step indicator — 1 / 2 */}
         <div className="flex items-center gap-2 mb-6">
-          <div className="flex-1 h-1 rounded-full" style={{ background: '#1D4ED8', opacity: 0.4 }} />
           <div className="flex-1 h-1 rounded-full" style={{ background: '#1D4ED8' }} />
           <div className="flex-1 h-1 rounded-full" style={{ background: '#E2E8F0' }} />
-          <span className="text-xs ml-1" style={{ color: '#94A3B8' }}>2 / 3</span>
+          <span className="text-xs ml-1" style={{ color: '#94A3B8' }}>1 / 2</span>
         </div>
 
         {/* Header */}

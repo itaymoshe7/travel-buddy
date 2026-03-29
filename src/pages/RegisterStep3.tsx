@@ -1,17 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 
-const REGIONS = [
-  { id: 'south-america',   label: 'South America',   emoji: '🌎' },
-  { id: 'southeast-asia',  label: 'South East Asia', emoji: '🌏' },
-  { id: 'europe',          label: 'Europe',           emoji: '🏰' },
-  { id: 'north-america',   label: 'North America',   emoji: '🗽' },
-  { id: 'middle-east',     label: 'Middle East',     emoji: '🕌' },
-  { id: 'africa',          label: 'Africa',           emoji: '🌍' },
-  { id: 'oceania',         label: 'Oceania',          emoji: '🏄' },
-  { id: 'central-america', label: 'Central America', emoji: '🌺' },
-]
-
 const VIBES = [
   { id: 'backpacker',       label: 'Backpacker',       description: 'Hostels, local eats, adventure on a budget',      emoji: '🎒' },
   { id: 'digital-nomad',    label: 'Digital Nomad',    description: 'Work from anywhere, co-working spaces & cafés',   emoji: '💻' },
@@ -26,11 +15,10 @@ interface Props {
 }
 
 export default function RegisterStep3({ userId, onComplete }: Props) {
-  const [bio,            setBio]            = useState('')
-  const [selectedRegion, setSelectedRegion] = useState<string | null>(null)
-  const [selectedVibe,   setSelectedVibe]   = useState<string | null>(null)
-  const [loading,        setLoading]        = useState(false)
-  const [serverError,    setServerError]    = useState<string | null>(null)
+  const [bio,          setBio]          = useState('')
+  const [selectedVibe, setSelectedVibe] = useState<string | null>(null)
+  const [loading,      setLoading]      = useState(false)
+  const [serverError,  setServerError]  = useState<string | null>(null)
 
   const bioMax = 160
 
@@ -41,9 +29,8 @@ export default function RegisterStep3({ userId, onComplete }: Props) {
     const { error } = await supabase
       .from('profiles')
       .update({
-        bio:           bio.trim() || null,
-        travel_region: selectedRegion,
-        travel_vibe:   selectedVibe,
+        bio:         bio.trim() || null,
+        travel_vibe: selectedVibe,
       })
       .eq('id', userId)
 
@@ -66,12 +53,11 @@ export default function RegisterStep3({ userId, onComplete }: Props) {
       <div className="w-full max-w-lg rounded-2xl p-8"
         style={{ background: 'white', boxShadow: '0 4px 24px rgba(15,23,42,0.08)' }}>
 
-        {/* Step indicator — 3 / 3 */}
+        {/* Step indicator — 2 / 2 */}
         <div className="flex items-center gap-2 mb-6">
           <div className="flex-1 h-1 rounded-full" style={{ background: '#1D4ED8', opacity: 0.4 }} />
-          <div className="flex-1 h-1 rounded-full" style={{ background: '#1D4ED8', opacity: 0.4 }} />
           <div className="flex-1 h-1 rounded-full" style={{ background: '#1D4ED8' }} />
-          <span className="text-xs ml-1" style={{ color: '#94A3B8' }}>3 / 3</span>
+          <span className="text-xs ml-1" style={{ color: '#94A3B8' }}>2 / 2</span>
         </div>
 
         {/* Header */}
@@ -103,37 +89,6 @@ export default function RegisterStep3({ userId, onComplete }: Props) {
               style={{ color: '#94A3B8' }}>
               {bio.length}/{bioMax}
             </span>
-          </div>
-        </div>
-
-        {/* Travel Region */}
-        <div className="mb-8">
-          <label className="block text-xs font-semibold uppercase tracking-wide mb-3"
-            style={{ color: '#64748B' }}>
-            Where do you want to explore?
-          </label>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {REGIONS.map(region => {
-              const active = selectedRegion === region.id
-              return (
-                <button
-                  key={region.id}
-                  type="button"
-                  onClick={() => setSelectedRegion(active ? null : region.id)}
-                  className="flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl border text-center transition-all focus:outline-none"
-                  style={{
-                    border:     active ? '1.5px solid #F472B6' : '1.5px solid #E2E8F0',
-                    background: active ? '#FDF2F8' : 'white',
-                  }}
-                >
-                  <span className="text-xl leading-none">{region.emoji}</span>
-                  <span className="text-[11px] font-semibold leading-tight"
-                    style={{ color: active ? '#BE185D' : '#475569' }}>
-                    {region.label}
-                  </span>
-                </button>
-              )
-            })}
           </div>
         </div>
 

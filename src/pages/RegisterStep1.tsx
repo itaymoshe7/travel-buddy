@@ -138,12 +138,10 @@ export default function RegisterStep1({ onNext, onSignIn }: Props) {
       <div className="w-full max-w-sm rounded-2xl p-8"
         style={{ background: 'white', boxShadow: '0 4px 24px rgba(15,23,42,0.08)' }}>
 
-        {/* Step indicator — 1 / 3 */}
+        {/* Step indicator — account creation (no number shown, just the track) */}
         <div className="flex items-center gap-2 mb-6">
-          <div className="flex-1 h-1 rounded-full" style={{ background: '#1D4ED8' }} />
           <div className="flex-1 h-1 rounded-full" style={{ background: '#E2E8F0' }} />
           <div className="flex-1 h-1 rounded-full" style={{ background: '#E2E8F0' }} />
-          <span className="text-xs ml-1" style={{ color: '#94A3B8' }}>1 / 3</span>
         </div>
 
         {/* Header */}
