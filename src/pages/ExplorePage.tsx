@@ -7,6 +7,7 @@ interface MomentRow {
   id: string
   title: string
   destination: string
+  region: string
   start_date: string | null
   end_date: string | null
   activity_type: string
@@ -46,14 +47,31 @@ const ACTIVITY_EMOJI: Record<string, string> = {
   nightlife: '🍻',
 }
 
-type FilterId = 'all' | 'stay' | 'trip' | 'landing'
-
-const FILTERS: { id: FilterId; label: string }[] = [
-  { id: 'all',     label: '⚡ All'       },
-  { id: 'stay',    label: '🏠 Stays'     },
-  { id: 'trip',    label: '🏔️ Adventure' },
-  { id: 'landing', label: '✈️ Flights'   },
+// Activity filters
+type ActivityFilter = 'all' | 'stay' | 'trip' | 'landing' | 'nightlife'
+const ACTIVITY_FILTERS: { id: ActivityFilter; label: string }[] = [
+  { id: 'all',       label: '⚡ All'       },
+  { id: 'stay',      label: '🏠 Stays'     },
+  { id: 'trip',      label: '🏔️ Adventure' },
+  { id: 'landing',   label: '✈️ Flights'   },
+  { id: 'nightlife', label: '🍻 Nightlife' },
 ]
+
+// Region filters — slugs must match DB CHECK constraint
+const REGION_META: Record<string, { label: string; emoji: string }> = {
+  'south-america':   { label: 'South America', emoji: '🌎' },
+  'far-east':        { label: 'Far East',       emoji: '🏯' },
+  'southeast-asia':  { label: 'SE Asia',        emoji: '🌏' },
+  'europe':          { label: 'Europe',          emoji: '🏰' },
+  'africa':          { label: 'Africa',          emoji: '🌍' },
+  'central-america': { label: 'Central Am.',    emoji: '🌺' },
+}
+const REGION_FILTER_IDS = Object.keys(REGION_META)
+
+function regionLabel(slug: string): string {
+  const m = REGION_META[slug]
+  return m ? `${m.emoji} ${m.label}` : slug
+}
 
 function formatDateRange(start: string | null, end: string | null): string {
   if (!start && !end) return ''
@@ -123,12 +141,11 @@ const MAX_SHOWN = 3
 
 function ParticipantAvatars({ participants }: { participants: Participant[] }) {
   if (participants.length === 0) return null
-  const shown  = participants.slice(0, MAX_SHOWN)
-  const extra  = participants.length - MAX_SHOWN
+  const shown = participants.slice(0, MAX_SHOWN)
+  const extra = participants.length - MAX_SHOWN
 
   return (
     <div className="flex items-center gap-1.5 mt-3">
-      {/* Overlapping mini-avatars */}
       <div className="flex items-center">
         {shown.map((p, i) => (
           <div key={i} className="rounded-full overflow-hidden shrink-0"
@@ -235,7 +252,7 @@ function MomentCard({
         : 'linear-gradient(145deg, rgba(253,242,248,0.9) 0%, rgba(239,246,255,0.9) 100%)'
   const requestBtnColor =
     gender === 'female' ? '#F472B6'
-    : gender === 'male' ? '#1D4ED8'
+    : gender === 'male'  ? '#1D4ED8'
     : '#F472B6'
 
   // Request button appearance
@@ -261,7 +278,6 @@ function MomentCard({
     requestBtnLabel = requesting ? '…' : 'Send Request'
   }
 
-  // Chat button — active for every non-own card; calls find_or_create_dm RPC
   async function handleChat() {
     if (isOwn || chatting) return
     setChatting(true)
@@ -273,7 +289,6 @@ function MomentCard({
       onToast('Could not open chat. Try again.', 'error')
       return
     }
-    // Pass creator name as loading fallback; ChatRoom will confirm/update via DB
     const creatorName = creator?.full_name ?? 'Traveller'
     onOpenChat(chatId as string, creatorName)
   }
@@ -319,16 +334,24 @@ function MomentCard({
           </span>
         </div>
 
-        {/* Middle: title, destination, dates */}
-        <div className="mb-4">
+        {/* Middle: title, destination + region badge, dates, spots */}
+        <div className="mb-1">
           <h2 className="text-base font-bold leading-snug mb-1" style={{ color: '#0F172A' }}>
             {moment.title}
           </h2>
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-sm" style={{ color: '#64748B' }}>
-              📍 {moment.destination}
-              {dateStr && <span className="ml-2" style={{ color: '#94A3B8' }}>· {dateStr}</span>}
-            </p>
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-sm truncate" style={{ color: '#64748B' }}>
+                📍 {moment.destination}
+                {dateStr && <span className="ml-2" style={{ color: '#94A3B8' }}>· {dateStr}</span>}
+              </p>
+              {/* Region tag */}
+              {moment.region && moment.region !== 'Other' && (
+                <p className="text-[11px] mt-0.5 font-medium" style={{ color: '#94A3B8' }}>
+                  {regionLabel(moment.region)}
+                </p>
+              )}
+            </div>
             {/* Spots left badge */}
             <span className="shrink-0 text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
               style={isFull
@@ -372,18 +395,16 @@ function MomentCard({
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function ExplorePage({ userId, onNotifications, onOpenChat }: Props) {
-  const [moments,          setMoments]         = useState<MomentRow[]>([])
-  const [loading,          setLoading]         = useState(true)
-  const [error,            setError]           = useState<string | null>(null)
-  // momentId → { status, chatId } — tracks request state per moment
-  const [requestMap,       setRequestMap]      = useState<Map<string, RequestInfo>>(new Map())
-  // momentId → accepted count (bypasses RLS via SECURITY DEFINER RPC)
-  const [acceptedCountMap,  setAcceptedCountMap]  = useState<Map<string, number>>(new Map())
-  // momentId → accepted participant profiles for avatar row
-  const [participantsMap,   setParticipantsMap]   = useState<Map<string, Participant[]>>(new Map())
-  const [toasts,           setToasts]          = useState<ToastState[]>([])
-  const [activeFilter,     setActiveFilter]    = useState<FilterId>('all')
-  const [pendingCount,     setPendingCount]    = useState(0)
+  const [moments,          setMoments]          = useState<MomentRow[]>([])
+  const [loading,          setLoading]          = useState(true)
+  const [error,            setError]            = useState<string | null>(null)
+  const [requestMap,       setRequestMap]       = useState<Map<string, RequestInfo>>(new Map())
+  const [acceptedCountMap, setAcceptedCountMap] = useState<Map<string, number>>(new Map())
+  const [participantsMap,  setParticipantsMap]  = useState<Map<string, Participant[]>>(new Map())
+  const [toasts,           setToasts]           = useState<ToastState[]>([])
+  const [activityFilter,   setActivityFilter]   = useState<ActivityFilter>('all')
+  const [regionFilter,     setRegionFilter]     = useState<string>('all')
+  const [pendingCount,     setPendingCount]     = useState(0)
   const toastCounter = useRef(0)
 
   function pushToast(message: string, kind: 'success' | 'error') {
@@ -397,12 +418,14 @@ export default function ExplorePage({ userId, onNotifications, onOpenChat }: Pro
       setLoading(true)
       setError(null)
 
+      // Global fetch — all moments regardless of user's region
       const { data, error: fetchError } = await supabase
         .from('moments')
         .select(`
           id,
           title,
           destination,
+          region,
           start_date,
           end_date,
           activity_type,
@@ -417,7 +440,7 @@ export default function ExplorePage({ userId, onNotifications, onOpenChat }: Pro
           )
         `)
         .order('created_at', { ascending: false })
-        .limit(50)
+        .limit(100)
 
       if (fetchError) {
         setError(fetchError.message)
@@ -425,7 +448,6 @@ export default function ExplorePage({ userId, onNotifications, onOpenChat }: Pro
         const rows = (data as unknown as MomentRow[]) ?? []
         setMoments(rows)
 
-        // Fetch accepted counts + participant profiles via SECURITY DEFINER RPCs
         if (rows.length > 0) {
           const ids = rows.map(m => m.id)
           const [{ data: counts }, { data: parts }] = await Promise.all([
@@ -464,7 +486,7 @@ export default function ExplorePage({ userId, onNotifications, onOpenChat }: Pro
         setRequestMap(map)
       }
 
-      // Moments I created → bell badge count + creator chat lookup
+      // Pending bell count for my moments
       const { data: myMoments } = await supabase
         .from('moments')
         .select('id')
@@ -485,9 +507,15 @@ export default function ExplorePage({ userId, onNotifications, onOpenChat }: Pro
     load()
   }, [userId])
 
-  const filtered = activeFilter === 'all'
-    ? moments
-    : moments.filter(m => m.activity_type === activeFilter)
+  // Client-side filtering: activity AND region
+  const filtered = moments.filter(m => {
+    const matchActivity = activityFilter === 'all' || m.activity_type === activityFilter
+    const matchRegion   = regionFilter   === 'all' || m.region        === regionFilter
+    return matchActivity && matchRegion
+  })
+
+  // Active region label for the header subtitle
+  const activeRegionMeta = regionFilter !== 'all' ? REGION_META[regionFilter] : null
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
@@ -501,9 +529,8 @@ export default function ExplorePage({ userId, onNotifications, onOpenChat }: Pro
         {/* Label row + bell */}
         <div className="flex items-start justify-between mb-1">
           <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: '#94A3B8' }}>
-            Your Crew
+            {activeRegionMeta ? `${activeRegionMeta.emoji} ${activeRegionMeta.label}` : 'Global Feed'}
           </p>
-          {/* Bell button */}
           <button
             type="button"
             aria-label="Notifications"
@@ -531,17 +558,17 @@ export default function ExplorePage({ userId, onNotifications, onOpenChat }: Pro
           Live feed 🌍
         </h1>
 
-        {/* Filter pills — horizontally scrollable */}
-        <div className="flex gap-2 overflow-x-auto pb-3 -mx-5 px-5 scrollbar-none"
+        {/* Activity filter pills */}
+        <div className="flex gap-2 overflow-x-auto pb-2 -mx-5 px-5 scrollbar-none"
           style={{ scrollbarWidth: 'none' }}>
-          {FILTERS.map(f => (
+          {ACTIVITY_FILTERS.map(f => (
             <button
               key={f.id}
               type="button"
-              onClick={() => setActiveFilter(f.id)}
+              onClick={() => setActivityFilter(f.id)}
               className="shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold transition-all focus:outline-none"
               style={
-                activeFilter === f.id
+                activityFilter === f.id
                   ? { background: '#1D4ED8', color: 'white', border: '1px solid #1D4ED8' }
                   : { background: 'white', color: '#64748B', border: '1px solid #E2E8F0' }
               }
@@ -549,6 +576,43 @@ export default function ExplorePage({ userId, onNotifications, onOpenChat }: Pro
               {f.label}
             </button>
           ))}
+        </div>
+
+        {/* Region filter pills */}
+        <div className="flex gap-2 overflow-x-auto pb-3 -mx-5 px-5 scrollbar-none"
+          style={{ scrollbarWidth: 'none' }}>
+          {/* All regions reset pill */}
+          <button
+            type="button"
+            onClick={() => setRegionFilter('all')}
+            className="shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold transition-all focus:outline-none"
+            style={
+              regionFilter === 'all'
+                ? { background: '#0EA5E9', color: 'white', border: '1px solid #0EA5E9' }
+                : { background: 'white', color: '#64748B', border: '1px solid #E2E8F0' }
+            }
+          >
+            🌐 All Regions
+          </button>
+          {REGION_FILTER_IDS.map(id => {
+            const meta   = REGION_META[id]
+            const active = regionFilter === id
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setRegionFilter(active ? 'all' : id)}
+                className="shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold transition-all focus:outline-none"
+                style={
+                  active
+                    ? { background: '#0EA5E9', color: 'white', border: '1px solid #0EA5E9' }
+                    : { background: 'white', color: '#64748B', border: '1px solid #E2E8F0' }
+                }
+              >
+                {meta.emoji} {meta.label}
+              </button>
+            )
+          })}
         </div>
       </div>
 
@@ -570,6 +634,7 @@ export default function ExplorePage({ userId, onNotifications, onOpenChat }: Pro
                 <div className="space-y-2 mb-4">
                   <div className="h-4 bg-slate-200 rounded w-2/3" />
                   <div className="h-3 bg-slate-100 rounded w-1/2" />
+                  <div className="h-2 bg-slate-100 rounded w-1/3" />
                 </div>
                 <div className="flex gap-2">
                   <div className="flex-1 h-9 bg-slate-200 rounded-xl" />
@@ -592,14 +657,18 @@ export default function ExplorePage({ userId, onNotifications, onOpenChat }: Pro
 
         {!loading && !error && filtered.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="text-5xl mb-5 select-none">🌍</div>
+            <div className="text-5xl mb-5 select-none">
+              {activeRegionMeta ? activeRegionMeta.emoji : '🌍'}
+            </div>
             <h2 className="text-lg font-bold mb-2" style={{ color: '#0F172A' }}>
-              {activeFilter === 'all' ? 'No moments yet. Start the journey!' : 'No moments in this category.'}
+              {activeRegionMeta
+                ? `No moments in ${activeRegionMeta.label} yet`
+                : 'No moments yet. Start the journey!'}
             </h2>
             <p className="text-sm max-w-xs" style={{ color: '#64748B' }}>
-              {activeFilter === 'all'
-                ? 'Be the first to drop a moment and connect with fellow travellers. Tap + below!'
-                : 'Try a different filter or tap + to create a new moment.'}
+              {activeRegionMeta
+                ? 'Be the first to post a moment here, or try a different region.'
+                : 'Be the first to drop a moment and connect with fellow travellers. Tap + below!'}
             </p>
           </div>
         )}
