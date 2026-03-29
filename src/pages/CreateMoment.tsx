@@ -1,6 +1,17 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 
+const REGIONS = [
+  { id: 'south-america',   label: 'South America', emoji: '🌎' },
+  { id: 'far-east',        label: 'Far East',       emoji: '🏯' },
+  { id: 'southeast-asia',  label: 'SE Asia',        emoji: '🌏' },
+  { id: 'europe',          label: 'Europe',          emoji: '🏰' },
+  { id: 'africa',          label: 'Africa',          emoji: '🌍' },
+  { id: 'central-america', label: 'Central Am.',    emoji: '🌺' },
+] as const
+
+type RegionId = typeof REGIONS[number]['id']
+
 const ACTIVITY_TYPES = [
   { id: 'landing',   label: 'Landing',   emoji: '✈️' },
   { id: 'stay',      label: 'Stay',      emoji: '🏨' },
@@ -13,6 +24,7 @@ type ActivityType = typeof ACTIVITY_TYPES[number]['id']
 interface FormState {
   title: string
   destination: string
+  region: RegionId | null
   startDate: string
   endDate: string
   activityType: ActivityType | null
@@ -23,6 +35,7 @@ interface FormState {
 interface FormErrors {
   title?: string
   destination?: string
+  region?: string
   startDate?: string
   endDate?: string
   activityType?: string
@@ -38,6 +51,7 @@ export default function CreateMoment({ userId, onComplete, onBack }: Props) {
   const [form, setForm] = useState<FormState>({
     title: '',
     destination: '',
+    region: null,
     startDate: '',
     endDate: '',
     activityType: null,
@@ -58,6 +72,7 @@ export default function CreateMoment({ userId, onComplete, onBack }: Props) {
     const next: FormErrors = {}
     if (!form.title.trim())       next.title        = 'Title is required'
     if (!form.destination.trim()) next.destination  = 'Destination is required'
+    if (!form.region)             next.region       = 'Please choose a region'
     if (!form.startDate)          next.startDate    = 'Start date is required'
     if (!form.endDate)            next.endDate      = 'End date is required'
     else if (form.startDate && form.endDate < form.startDate)
@@ -76,6 +91,7 @@ export default function CreateMoment({ userId, onComplete, onBack }: Props) {
       creator_id:    userId,
       title:         form.title.trim(),
       destination:   form.destination.trim(),
+      region:        form.region,
       start_date:    form.startDate,
       end_date:      form.endDate,
       activity_type: form.activityType,
@@ -150,6 +166,35 @@ export default function CreateMoment({ userId, onComplete, onBack }: Props) {
                   : 'border-slate-200 bg-slate-50 focus:border-primary focus:bg-white'}`}
             />
             {errors.destination && <p className="text-xs text-red-500 mt-1">{errors.destination}</p>}
+          </div>
+
+          {/* Region */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+              Region
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {REGIONS.map(r => {
+                const active = form.region === r.id
+                return (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => set('region', r.id)}
+                    className={`flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl border text-center transition-all focus:outline-none
+                      ${active
+                        ? 'border-accent-pink bg-pink-50 shadow-sm'
+                        : 'border-slate-200 bg-white hover:border-pink-200 hover:bg-pink-50/40'}`}
+                  >
+                    <span className="text-lg leading-none">{r.emoji}</span>
+                    <span className={`text-[11px] font-semibold leading-tight ${active ? 'text-accent-pink' : 'text-slate-500'}`}>
+                      {r.label}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+            {errors.region && <p className="text-xs text-red-500 mt-1.5">{errors.region}</p>}
           </div>
 
           {/* Dates */}
