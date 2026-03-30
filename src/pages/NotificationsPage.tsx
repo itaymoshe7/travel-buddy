@@ -61,6 +61,7 @@ export default function NotificationsPage({ userId, onBack, onOpenChat }: Props)
   const [approved,   setApproved] = useState<ApprovedAlert[]>([])
   const [loading,    setLoading]  = useState(true)
   const [acting,     setActing]   = useState<string | null>(null)
+  const [chatting,   setChatting]  = useState<string | null>(null)
   const [actionErr,  setActionErr] = useState<string | null>(null)
 
   useEffect(() => { load() }, [userId])
@@ -137,6 +138,24 @@ export default function NotificationsPage({ userId, onBack, onOpenChat }: Props)
 
     setIncoming(prev => prev.filter(r => r.id !== req.id))
     setActing(null)
+  }
+
+  async function handleChat(req: IncomingRequest) {
+    setChatting(req.id)
+    setActionErr(null)
+
+    const { data: chatId, error } = await supabase.rpc('find_or_create_dm', {
+      other_user_id: req.user_id,
+    })
+
+    setChatting(null)
+
+    if (error || !chatId) {
+      setActionErr('Could not open chat. Try again.')
+      return
+    }
+
+    onOpenChat(chatId as string, req.profiles?.full_name ?? 'Traveller')
   }
 
   const isEmpty = !loading && incoming.length === 0 && approved.length === 0
@@ -240,18 +259,32 @@ export default function NotificationsPage({ userId, onBack, onOpenChat }: Props)
                       <button
                         type="button"
                         onClick={() => handleApprove(req)}
-                        disabled={acting === req.id}
+                        disabled={acting === req.id || chatting === req.id}
                         className="flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors focus:outline-none"
-                        style={{ background: '#1D4ED8', color: 'white', opacity: acting === req.id ? 0.6 : 1 }}
+                        style={{ background: '#1D4ED8', color: 'white', opacity: (acting === req.id || chatting === req.id) ? 0.6 : 1 }}
                       >
                         {acting === req.id ? '…' : 'Approve'}
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleDecline(req)}
-                        disabled={acting === req.id}
+                        onClick={() => handleChat(req)}
+                        disabled={acting === req.id || chatting === req.id}
                         className="flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors focus:outline-none"
-                        style={{ background: '#F1F5F9', color: '#64748B', opacity: acting === req.id ? 0.6 : 1 }}
+                        style={{
+                          background: 'transparent',
+                          color: '#1D4ED8',
+                          border: '1.5px solid #1D4ED8',
+                          opacity: (acting === req.id || chatting === req.id) ? 0.6 : 1,
+                        }}
+                      >
+                        {chatting === req.id ? '…' : 'Chat'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDecline(req)}
+                        disabled={acting === req.id || chatting === req.id}
+                        className="flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors focus:outline-none"
+                        style={{ background: '#F1F5F9', color: '#64748B', opacity: (acting === req.id || chatting === req.id) ? 0.6 : 1 }}
                       >
                         Decline
                       </button>
