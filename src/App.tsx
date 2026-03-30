@@ -12,6 +12,8 @@ import ProfileScreen  from './pages/ProfileScreen'
 import ChatList       from './pages/ChatList'
 import ChatRoom            from './pages/ChatRoom'
 import NotificationsPage  from './pages/NotificationsPage'
+import MomentDetail       from './pages/MomentDetail'
+import PublicProfile      from './pages/PublicProfile'
 import BottomNav from './components/BottomNav'
 import type { NavTab } from './components/BottomNav'
 
@@ -22,6 +24,8 @@ type Page =
   | 'chats' | 'chat-room'                                // chat flow
   | 'profile'                                            // profile tab
   | 'notifications'                                      // alerts overlay
+  | 'moment-detail'                                      // full moment view
+  | 'public-profile'                                     // read-only profile of another user
 
 // Map page → active nav tab
 function activeTab(page: Page): NavTab {
@@ -32,12 +36,16 @@ function activeTab(page: Page): NavTab {
 }
 
 export default function App() {
-  const [page,          setPage]         = useState<Page>('welcome')
-  const [userId,        setUserId]       = useState<string | null>(null)
-  const [socialLink,    setSocialLink]   = useState<string>('')
-  const [chatId,        setChatId]       = useState<string | null>(null)
-  const [chatPartner,   setChatPartner]  = useState<string>('Traveller')
-  const [authReady,     setAuthReady]    = useState(false)
+  const [page,            setPage]           = useState<Page>('welcome')
+  const [userId,          setUserId]         = useState<string | null>(null)
+  const [socialLink,      setSocialLink]     = useState<string>('')
+  const [chatId,          setChatId]         = useState<string | null>(null)
+  const [chatPartner,     setChatPartner]    = useState<string>('Traveller')
+  const [authReady,       setAuthReady]      = useState(false)
+  const [selectedMomentId, setSelectedMomentId] = useState<string | null>(null)
+  const [viewedUserId,    setViewedUserId]   = useState<string | null>(null)
+  // track where moment-detail was opened from so back works correctly
+  const [momentDetailOrigin, setMomentDetailOrigin] = useState<Page>('explore')
 
   // ── Restore session on mount + listen for future auth events ──────────────
   useEffect(() => {
@@ -175,6 +183,27 @@ export default function App() {
     )
   }
 
+  if (page === 'moment-detail') {
+    return (
+      <MomentDetail
+        momentId={selectedMomentId!}
+        userId={userId!}
+        onBack={() => setPage(momentDetailOrigin)}
+        onOpenChat={(id, name) => { setChatId(id); setChatPartner(name); setPage('chat-room') }}
+        onViewProfile={id => { setViewedUserId(id); setPage('public-profile') }}
+      />
+    )
+  }
+
+  if (page === 'public-profile') {
+    return (
+      <PublicProfile
+        userId={viewedUserId!}
+        onBack={() => setPage('moment-detail')}
+      />
+    )
+  }
+
   // ── Tabbed authenticated views (with bottom nav) ──────────────────────────
 
   return (
@@ -183,22 +212,16 @@ export default function App() {
         <ExplorePage
           userId={userId!}
           onNotifications={() => setPage('notifications')}
-          onOpenChat={(id, name) => {
-            setChatId(id)
-            setChatPartner(name)
-            setPage('chat-room')
-          }}
+          onOpenChat={(id, name) => { setChatId(id); setChatPartner(name); setPage('chat-room') }}
+          onSelectMoment={id => { setSelectedMomentId(id); setMomentDetailOrigin('explore'); setPage('moment-detail') }}
         />
       )}
 
       {page === 'my-moments' && (
         <MyMoments
           userId={userId!}
-          onOpenChat={(id, name) => {
-            setChatId(id)
-            setChatPartner(name)
-            setPage('chat-room')
-          }}
+          onOpenChat={(id, name) => { setChatId(id); setChatPartner(name); setPage('chat-room') }}
+          onSelectMoment={id => { setSelectedMomentId(id); setMomentDetailOrigin('my-moments'); setPage('moment-detail') }}
         />
       )}
 

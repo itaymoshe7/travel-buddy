@@ -36,6 +36,7 @@ interface Props {
   userId:          string
   onNotifications: () => void
   onOpenChat:      (chatId: string, name: string) => void
+  onSelectMoment:  (id: string) => void
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -205,6 +206,7 @@ function MomentCard({
   onRequested,
   onToast,
   onOpenChat,
+  onSelect,
 }: {
   moment:        MomentRow
   userId:        string
@@ -214,6 +216,7 @@ function MomentCard({
   onRequested:   (id: string) => void
   onToast:       (msg: string, kind: 'success' | 'error') => void
   onOpenChat:    (chatId: string, name: string) => void
+  onSelect:      () => void
 }) {
   const [requesting, setRequesting] = useState(false)
   const [chatting,   setChatting]   = useState(false)
@@ -307,6 +310,8 @@ function MomentCard({
       }}>
 
       <div className="p-5">
+        {/* Tappable area — opens detail view */}
+        <div className="cursor-pointer" onClick={onSelect}>
         {/* Top row: avatar + name + activity icon */}
         <div className="flex items-center gap-3 mb-4">
           <Avatar url={creator?.avatar_url ?? null} name={creator?.full_name ?? null} />
@@ -364,12 +369,13 @@ function MomentCard({
 
         {/* Participant avatars — social proof */}
         <ParticipantAvatars participants={participants} />
+        </div>{/* end tappable area */}
 
         {/* Bottom: action buttons */}
         <div className="flex gap-2 mt-4">
           <button
             type="button"
-            onClick={handleSendRequest}
+            onClick={e => { e.stopPropagation(); handleSendRequest() }}
             disabled={requesting || !!status || isOwn || isFull}
             className="flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all focus:outline-none"
             style={requestBtnStyle}
@@ -379,7 +385,7 @@ function MomentCard({
 
           <button
             type="button"
-            onClick={handleChat}
+            onClick={e => { e.stopPropagation(); handleChat() }}
             disabled={!chatBtnActive || chatting}
             className="flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all focus:outline-none"
             style={chatBtnStyle}
@@ -394,7 +400,7 @@ function MomentCard({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function ExplorePage({ userId, onNotifications, onOpenChat }: Props) {
+export default function ExplorePage({ userId, onNotifications, onOpenChat, onSelectMoment }: Props) {
   const [moments,          setMoments]          = useState<MomentRow[]>([])
   const [loading,          setLoading]          = useState(true)
   const [error,            setError]            = useState<string | null>(null)
@@ -690,6 +696,7 @@ export default function ExplorePage({ userId, onNotifications, onOpenChat }: Pro
                 })}
                 onToast={pushToast}
                 onOpenChat={onOpenChat}
+                onSelect={() => onSelectMoment(moment.id)}
               />
             ))}
           </div>

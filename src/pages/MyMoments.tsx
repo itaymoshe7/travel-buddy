@@ -17,8 +17,9 @@ interface MomentCard {
 }
 
 interface Props {
-  userId:     string
-  onOpenChat: (chatId: string, name: string) => void
+  userId:         string
+  onOpenChat:     (chatId: string, name: string) => void
+  onSelectMoment: (id: string) => void
 }
 
 type Tab = 'posts' | 'joined'
@@ -80,9 +81,11 @@ function StatusBadge({ status }: { status: string }) {
 function MomentItem({
   moment,
   onOpenChat,
+  onSelect,
 }: {
   moment:      MomentCard
   onOpenChat?: (chatId: string, name: string) => void
+  onSelect:    () => void
 }) {
   const [chatting, setChatting] = useState(false)
   const dateStr    = formatDateRange(moment.start_date, moment.end_date)
@@ -123,7 +126,7 @@ function MomentItem({
         border:    `1px solid ${isApproved ? 'rgba(134,239,172,0.5)' : 'rgba(226,232,240,0.7)'}`,
         boxShadow: '0 2px 10px rgba(15,23,42,0.06)',
       }}>
-      <div className="p-4">
+      <div className="p-4 cursor-pointer" onClick={onSelect}>
         {/* Top row: icon + info + chat button */}
         <div className="flex items-center gap-3">
           {/* Activity icon bubble */}
@@ -147,7 +150,7 @@ function MomentItem({
           {showChat ? (
             <button
               type="button"
-              onClick={handleChat}
+              onClick={e => { e.stopPropagation(); handleChat() }}
               disabled={chatting}
               className="shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider focus:outline-none transition-colors"
               style={{ background: 'rgba(29,78,216,0.10)', color: '#1D4ED8', cursor: 'pointer' }}
@@ -175,7 +178,7 @@ function MomentItem({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function MyMoments({ userId, onOpenChat }: Props) {
+export default function MyMoments({ userId, onOpenChat, onSelectMoment }: Props) {
   const [activeTab,    setActiveTab]    = useState<Tab>('posts')
   const [myPosts,      setMyPosts]      = useState<MomentCard[]>([])
   const [joinedMoments, setJoinedMoments] = useState<MomentCard[]>([])
@@ -337,6 +340,7 @@ export default function MyMoments({ userId, onOpenChat }: Props) {
                 key={m.id}
                 moment={m}
                 onOpenChat={activeTab === 'joined' ? onOpenChat : undefined}
+                onSelect={() => onSelectMoment(m.id)}
               />
             ))}
           </div>
