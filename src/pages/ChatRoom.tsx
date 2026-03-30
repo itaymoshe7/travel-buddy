@@ -88,6 +88,13 @@ export default function ChatRoom({ chatId, userId, otherUserName, onBack }: Prop
       if (mounted) {
         setMessages((data as unknown as MessageRow[]) ?? [])
         setLoading(false)
+        // Mark chat as read so unread count resets in ChatList
+        supabase
+          .from('chat_participants')
+          .update({ last_read_at: new Date().toISOString() })
+          .eq('chat_id', chatId)
+          .eq('user_id', userId)
+          .then(() => {})
       }
 
       // 3. Subscribe to new messages via Supabase Realtime
@@ -188,13 +195,13 @@ export default function ChatRoom({ chatId, userId, otherUserName, onBack }: Prop
           const isMine = msg.sender_id === userId
           return (
             <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[72%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed
+              <div className={`max-w-[72%] px-5 py-3 rounded-3xl text-sm leading-relaxed
                 ${isMine
-                  ? 'bg-primary text-white rounded-br-sm'
-                  : 'bg-white text-text-main rounded-bl-sm shadow-sm border border-slate-100'}`}
+                  ? 'bg-primary text-white rounded-br-md'
+                  : 'bg-slate-100 text-text-main rounded-bl-md'}`}
               >
                 <p>{msg.content}</p>
-                <p className={`text-[10px] mt-1 ${isMine ? 'text-blue-200' : 'text-slate-400'} text-right`}>
+                <p className={`text-[10px] mt-1.5 ${isMine ? 'text-blue-200' : 'text-slate-400'} text-right`}>
                   {formatTime(msg.created_at)}
                 </p>
               </div>
