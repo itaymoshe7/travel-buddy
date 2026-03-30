@@ -186,9 +186,8 @@ export default function ChatList({ userId, onOpenChat }: Props) {
         {/* Chat list */}
         {!loading && !error && chats.length > 0 && (
           <div className="flex flex-col">
-            {chats.map((chat, i) => {
+            {chats.map((chat) => {
               const hasUnread = chat.unreadCount > 0
-              const isLast    = i === chats.length - 1
               return (
                 <button
                   key={chat.chatId}
