@@ -81,10 +81,12 @@ function StatusBadge({ status }: { status: string }) {
 function MomentItem({
   moment,
   onOpenChat,
+  onDelete,
   onSelect,
 }: {
   moment:      MomentCard
   onOpenChat?: (chatId: string, name: string) => void
+  onDelete?:   () => void
   onSelect:    () => void
 }) {
   const [chatting, setChatting] = useState(false)
@@ -146,23 +148,39 @@ function MomentItem({
             </p>
           </div>
 
-          {/* Chat button (joined tab) or chevron (posts tab) */}
-          {showChat ? (
-            <button
-              type="button"
-              onClick={e => { e.stopPropagation(); handleChat() }}
-              disabled={chatting}
-              className="shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider focus:outline-none transition-colors"
-              style={{ background: 'rgba(29,78,216,0.10)', color: '#1D4ED8', cursor: 'pointer' }}
-            >
-              {chatting ? '…' : 'Chat'}
-            </button>
-          ) : (
-            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-              strokeWidth={2} style={{ color: '#CBD5E1' }}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
-          )}
+          {/* Right side actions */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {showChat && (
+              <button
+                type="button"
+                onClick={e => { e.stopPropagation(); handleChat() }}
+                disabled={chatting}
+                className="px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider focus:outline-none transition-colors"
+                style={{ background: 'rgba(29,78,216,0.10)', color: '#1D4ED8', cursor: 'pointer' }}
+              >
+                {chatting ? '…' : 'Chat'}
+              </button>
+            )}
+            {onDelete && (
+              <button
+                type="button"
+                onClick={e => { e.stopPropagation(); onDelete() }}
+                className="w-7 h-7 rounded-lg flex items-center justify-center focus:outline-none transition-colors"
+                style={{ background: 'rgba(239,68,68,0.08)', color: '#EF4444' }}
+                aria-label="Delete moment"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            )}
+            {!showChat && !onDelete && (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                strokeWidth={2} style={{ color: '#CBD5E1' }}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            )}
+          </div>
         </div>
 
         {/* Status badge — only shown in joined tab */}
@@ -179,11 +197,12 @@ function MomentItem({
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function MyMoments({ userId, onOpenChat, onSelectMoment }: Props) {
-  const [activeTab,    setActiveTab]    = useState<Tab>('posts')
-  const [myPosts,      setMyPosts]      = useState<MomentCard[]>([])
+  const [activeTab,     setActiveTab]     = useState<Tab>('posts')
+  const [myPosts,       setMyPosts]       = useState<MomentCard[]>([])
   const [joinedMoments, setJoinedMoments] = useState<MomentCard[]>([])
   const [loadingPosts,  setLoadingPosts]  = useState(true)
   const [loadingJoined, setLoadingJoined] = useState(true)
+  const [deletingId,    setDeletingId]    = useState<string | null>(null)
 
   // Fetch moments created by the user
   useEffect(() => {
@@ -252,6 +271,19 @@ export default function MyMoments({ userId, onOpenChat, onSelectMoment }: Props)
     }
     load()
   }, [userId])
+
+  async function handleDelete(momentId: string) {
+    const confirmed = window.confirm(
+      'Are you sure you want to delete this moment? This will also remove all join requests and the associated chat.'
+    )
+    if (!confirmed) return
+    setDeletingId(momentId)
+    const { error } = await supabase.from('moments').delete().eq('id', momentId)
+    setDeletingId(null)
+    if (!error) {
+      setMyPosts(prev => prev.filter(m => m.id !== momentId))
+    }
+  }
 
   const loading = activeTab === 'posts' ? loadingPosts : loadingJoined
   const items   = activeTab === 'posts' ? myPosts      : joinedMoments
@@ -340,6 +372,9 @@ export default function MyMoments({ userId, onOpenChat, onSelectMoment }: Props)
                 key={m.id}
                 moment={m}
                 onOpenChat={activeTab === 'joined' ? onOpenChat : undefined}
+                onDelete={activeTab === 'posts' && deletingId !== m.id
+                  ? () => handleDelete(m.id)
+                  : undefined}
                 onSelect={() => onSelectMoment(m.id)}
               />
             ))}

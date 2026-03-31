@@ -150,7 +150,7 @@ export default function RegisterStep1({ onNext, onSignIn }: Props) {
             Create your account
           </h1>
           <p className="text-sm mt-1" style={{ color: '#64748B' }}>
-            Join TravelBuddy and find your crew
+            Join Mate and find your crew
           </p>
         </div>
 

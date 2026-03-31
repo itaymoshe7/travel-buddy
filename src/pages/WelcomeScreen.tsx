@@ -237,7 +237,7 @@ export default function WelcomeScreen({ onSignUp, onLogIn }: Props) {
             <path strokeLinecap="round" d="M5.6 7.5a14 14 0 0112.8 0M5.6 16.5a14 14 0 0012.8 0" />
           </svg>
           <span className="text-3xl font-black tracking-tight text-white">
-            TravelBuddy
+            Mate
           </span>
         </div>
         <p className="text-sm font-medium" style={{ color: 'rgba(186,230,253,0.90)', letterSpacing: '0.06em' }}>

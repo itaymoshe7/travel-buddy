@@ -99,6 +99,7 @@ export default function MomentDetail({ momentId, userId, onBack, onOpenChat, onV
   const [requestInfo,  setRequestInfo]  = useState<{ status: string; chatId: string | null } | null>(null)
   const [loading,      setLoading]      = useState(true)
   const [acting,       setActing]       = useState(false)
+  const [deleting,     setDeleting]     = useState(false)
   const [toastMsg,     setToastMsg]     = useState<string | null>(null)
 
   useEffect(() => {
@@ -149,6 +150,19 @@ export default function MomentDetail({ momentId, userId, onBack, onOpenChat, onV
     if (error) { showToast(error.code === '23505' ? 'Already requested!' : error.message); return }
     setRequestInfo({ status: 'pending', chatId: null })
     showToast('Request sent! ✈️')
+  }
+
+  async function handleDelete() {
+    if (!moment || deleting) return
+    const confirmed = window.confirm(
+      'Are you sure you want to delete this moment? This will also remove all join requests and the associated chat.'
+    )
+    if (!confirmed) return
+    setDeleting(true)
+    const { error } = await supabase.from('moments').delete().eq('id', momentId)
+    setDeleting(false)
+    if (error) { showToast(`Could not delete: ${error.message}`); return }
+    onBack()
   }
 
   async function handleChat() {
@@ -235,17 +249,33 @@ export default function MomentDetail({ momentId, userId, onBack, onOpenChat, onV
           <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: '#94A3B8' }}>
             Moment Details
           </p>
-          <button
-            type="button"
-            onClick={onBack}
-            className="w-8 h-8 rounded-full flex items-center justify-center focus:outline-none"
-            style={{ background: '#F1F5F9', color: '#64748B' }}
-            aria-label="Back"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-2">
+            {isOwn && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleting}
+                className="w-8 h-8 rounded-full flex items-center justify-center focus:outline-none transition-colors"
+                style={{ background: 'rgba(239,68,68,0.08)', color: deleting ? '#FCA5A5' : '#EF4444' }}
+                aria-label="Delete moment"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onBack}
+              className="w-8 h-8 rounded-full flex items-center justify-center focus:outline-none"
+              style={{ background: '#F1F5F9', color: '#64748B' }}
+              aria-label="Back"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+          </div>
         </div>
         <h1 className="text-[22px] font-bold leading-tight" style={{ color: '#0F172A', letterSpacing: '-0.02em' }}>
           {moment.title}

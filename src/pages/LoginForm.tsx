@@ -49,7 +49,7 @@ export default function LoginForm({ onSuccess, onBack }: Props) {
             <h1 className="text-2xl font-bold text-text-main tracking-tight leading-none">
               Welcome back
             </h1>
-            <p className="text-sm text-slate-500 mt-1">Log in to your TravelBuddy account</p>
+            <p className="text-sm text-slate-500 mt-1">Log in to your Mate account</p>
           </div>
           <button
             type="button"

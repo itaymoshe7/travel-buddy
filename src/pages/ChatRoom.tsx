@@ -30,7 +30,7 @@ export default function ChatRoom({ chatId, userId, otherUserName, onBack }: Prop
   const [sending,    setSending]   = useState(false)
   // Room identity — derived from DB, starts with the passed-in fallback
   const [roomTitle,    setRoomTitle]    = useState(otherUserName)
-  const [roomSubtitle, setRoomSubtitle] = useState('TravelBuddy Chat')
+  const [roomSubtitle, setRoomSubtitle] = useState('Mate Chat')
   const profilesRef = useRef<ProfileCache>(new Map())
   const bottomRef   = useRef<HTMLDivElement>(null)
 

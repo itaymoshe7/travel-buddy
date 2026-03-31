@@ -12,6 +12,15 @@ const REGIONS = [
 
 type RegionId = typeof REGIONS[number]['id']
 
+const REGION_CITIES: Record<RegionId, string[]> = {
+  'south-america':   ['Buenos Aires', 'Rio de Janeiro', 'Cusco', 'Cartagena', 'Medellín', 'Lima', 'Santiago', 'São Paulo', 'Bogotá', 'Montevideo'],
+  'far-east':        ['Tokyo', 'Kyoto', 'Seoul', 'Shanghai', 'Beijing', 'Hong Kong', 'Osaka', 'Taipei', 'Chengdu', 'Busan'],
+  'southeast-asia':  ['Bangkok', 'Bali', 'Hanoi', 'Ho Chi Minh City', 'Singapore', 'Kuala Lumpur', 'Chiang Mai', 'Phuket', 'Phnom Penh', 'Yangon'],
+  'europe':          ['Paris', 'Barcelona', 'Amsterdam', 'Rome', 'Lisbon', 'Prague', 'Berlin', 'Athens', 'Budapest', 'Dubrovnik'],
+  'africa':          ['Marrakech', 'Cape Town', 'Nairobi', 'Cairo', 'Zanzibar', 'Addis Ababa', 'Lagos', 'Casablanca', 'Accra', 'Dakar'],
+  'central-america': ['Mexico City', 'Cancún', 'Tulum', 'Guatemala City', 'San José', 'Havana', 'Panama City', 'Antigua', 'Oaxaca', 'Playa del Carmen'],
+}
+
 const ACTIVITY_TYPES = [
   { id: 'landing',   label: 'Landing',   emoji: '✈️' },
   { id: 'stay',      label: 'Stay',      emoji: '🏨' },
@@ -150,25 +159,7 @@ export default function CreateMoment({ userId, onComplete, onBack }: Props) {
             {errors.title && <p className="text-xs text-red-500 mt-1">{errors.title}</p>}
           </div>
 
-          {/* Destination */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
-              Specific Destination
-            </label>
-            <input
-              type="text"
-              value={form.destination}
-              onChange={e => set('destination', e.target.value)}
-              placeholder="e.g. Mount Batur, Bali"
-              className={`w-full px-4 py-2.5 rounded-xl border text-sm text-text-main placeholder:text-slate-400 outline-none transition-colors
-                ${errors.destination
-                  ? 'border-red-400 bg-red-50'
-                  : 'border-slate-200 bg-slate-50 focus:border-primary focus:bg-white'}`}
-            />
-            {errors.destination && <p className="text-xs text-red-500 mt-1">{errors.destination}</p>}
-          </div>
-
-          {/* Region */}
+          {/* Region — must come before City so the dropdown is populated */}
           <div>
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
               Region
@@ -180,7 +171,12 @@ export default function CreateMoment({ userId, onComplete, onBack }: Props) {
                   <button
                     key={r.id}
                     type="button"
-                    onClick={() => set('region', r.id)}
+                    onClick={() => {
+                      // Changing region resets city selection for consistency
+                      setForm(prev => ({ ...prev, region: r.id, destination: '' }))
+                      setErrors(prev => ({ ...prev, region: undefined, destination: undefined }))
+                      setServerError(null)
+                    }}
                     className={`flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl border text-center transition-all focus:outline-none
                       ${active
                         ? 'border-accent-pink bg-pink-50 shadow-sm'
@@ -195,6 +191,32 @@ export default function CreateMoment({ userId, onComplete, onBack }: Props) {
               })}
             </div>
             {errors.region && <p className="text-xs text-red-500 mt-1.5">{errors.region}</p>}
+          </div>
+
+          {/* City — dropdown populated from selected region */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+              City
+            </label>
+            <select
+              value={form.destination}
+              disabled={!form.region}
+              onChange={e => set('destination', e.target.value)}
+              className={`w-full px-4 py-2.5 rounded-xl border text-sm outline-none transition-colors appearance-none
+                ${errors.destination
+                  ? 'border-red-400 bg-red-50 text-text-main'
+                  : !form.region
+                    ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'
+                    : 'border-slate-200 bg-slate-50 text-text-main focus:border-primary focus:bg-white cursor-pointer'}`}
+            >
+              <option value="">
+                {form.region ? 'Pick a city…' : 'Select a region first'}
+              </option>
+              {form.region && REGION_CITIES[form.region].map(city => (
+                <option key={city} value={city}>{city}</option>
+              ))}
+            </select>
+            {errors.destination && <p className="text-xs text-red-500 mt-1">{errors.destination}</p>}
           </div>
 
           {/* Dates */}
