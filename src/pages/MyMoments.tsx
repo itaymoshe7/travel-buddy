@@ -11,6 +11,7 @@ interface MomentCard {
   end_date:      string | null
   activity_type: string
   image_url?:    string | null
+  description?:  string | null
   creator_id?:   string       // only set for joined moments
   creator_name?: string | null // loaded alongside creator_id for DM name fallback
   status?:       string       // 'pending' | 'accepted' — only set for joined moments
@@ -96,65 +97,128 @@ function MomentItem({
   const isPending  = moment.status === 'pending'
   const showChat   = onOpenChat !== undefined && (isApproved || isPending)
   const hasImage   = !!moment.image_url
-  const txt = hasImage ? '#FFFFFF'                : '#0F172A'
-  const sub = hasImage ? 'rgba(255,255,255,0.85)' : '#64748B'
-  const mut = hasImage ? 'rgba(255,255,255,0.65)' : '#94A3B8'
 
   async function handleChat() {
     if (!onOpenChat || chatting) return
 
     if (isApproved && moment.chatId) {
-      // Accepted → go straight to the group chat
       onOpenChat(moment.chatId, moment.title)
       return
     }
 
     if (isPending && moment.creator_id) {
-      // Pending → open a 1-on-1 DM with the creator (same RPC as ExplorePage)
       setChatting(true)
       const { data: chatId, error } = await supabase.rpc('find_or_create_dm', {
         other_user_id: moment.creator_id,
       })
       setChatting(false)
       if (!error && chatId) {
-        // Pass creator name as loading fallback; ChatRoom self-derives the real title
         const fallback = moment.creator_name ?? 'Traveller'
         onOpenChat(chatId as string, fallback)
       }
     }
   }
 
+  // ── Photo-hero layout ────────────────────────────────────────────────────
+  if (hasImage) {
+    return (
+      <div className="relative rounded-3xl overflow-hidden"
+        style={{ minHeight: 180, boxShadow: '0 4px 20px rgba(15,23,42,0.16), 0 1px 4px rgba(15,23,42,0.08)' }}>
+
+        {/* Full-bleed background image */}
+        <img
+          src={moment.image_url!}
+          alt={moment.title}
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+
+        {/* Gradient overlay */}
+        <div className="absolute inset-0"
+          style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.80) 0%, rgba(0,0,0,0.18) 60%, rgba(0,0,0,0.04) 100%)' }} />
+
+        {/* Floating actions — top right */}
+        <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5">
+          {showChat && (
+            <button
+              type="button"
+              onClick={e => { e.stopPropagation(); handleChat() }}
+              disabled={chatting}
+              className="px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider focus:outline-none"
+              style={{ background: 'rgba(255,255,255,0.18)', color: 'white', backdropFilter: 'blur(8px)' }}
+            >
+              {chatting ? '…' : 'Chat'}
+            </button>
+          )}
+          {onDelete && (
+            <button
+              type="button"
+              onClick={e => { e.stopPropagation(); onDelete() }}
+              className="w-7 h-7 rounded-lg flex items-center justify-center focus:outline-none"
+              style={{ background: 'rgba(255,255,255,0.18)', color: 'white', backdropFilter: 'blur(8px)' }}
+              aria-label="Delete moment"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {/* Bottom content */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 z-10 cursor-pointer" onClick={onSelect}>
+          <div className="flex items-end gap-2.5">
+            <span className="text-2xl leading-none shrink-0 mb-0.5">
+              {ACTIVITY_EMOJI[moment.activity_type] ?? '📍'}
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-white truncate">{moment.title}</p>
+              <p className="text-xs mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.72)' }}>
+                📍 {moment.destination}
+                {dateStr && <span style={{ color: 'rgba(255,255,255,0.45)' }}> · {dateStr}</span>}
+              </p>
+              {moment.description && (
+                <p className="text-xs mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                  {moment.description}
+                </p>
+              )}
+            </div>
+          </div>
+          {moment.status && (
+            <div className="mt-2">
+              <StatusBadge status={moment.status} />
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // ── Standard card (no image) ──────────────────────────────────────────────
   return (
     <div className="rounded-3xl overflow-hidden"
       style={{
-        background:         hasImage ? undefined : isApproved
+        background: isApproved
           ? 'linear-gradient(145deg, rgba(220,252,231,0.6) 0%, rgba(239,246,255,0.9) 100%)'
           : 'linear-gradient(145deg, rgba(248,250,252,0.9) 0%, rgba(239,246,255,0.9) 100%)',
-        backgroundImage:    hasImage
-          ? `linear-gradient(to bottom, rgba(0,0,0,0.20) 0%, rgba(0,0,0,0.65) 100%), url(${moment.image_url})`
-          : undefined,
-        backgroundSize:     hasImage ? 'cover'  : undefined,
-        backgroundPosition: hasImage ? 'center' : undefined,
-        border:    hasImage ? 'none' : `1px solid ${isApproved ? 'rgba(134,239,172,0.5)' : 'rgba(226,232,240,0.7)'}`,
+        border:    `1px solid ${isApproved ? 'rgba(134,239,172,0.5)' : 'rgba(226,232,240,0.7)'}`,
         boxShadow: '0 2px 4px rgba(15,23,42,0.04), 0 8px 24px rgba(15,23,42,0.10)',
       }}>
       <div className="p-4 cursor-pointer" onClick={onSelect}>
-        {/* Top row: icon + info + chat button */}
         <div className="flex items-center gap-3">
           {/* Activity icon bubble */}
           <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 text-xl"
-            style={{ background: hasImage ? 'rgba(255,255,255,0.18)' : 'white', boxShadow: '0 1px 4px rgba(15,23,42,0.08)' }}>
+            style={{ background: 'white', boxShadow: '0 1px 4px rgba(15,23,42,0.08)' }}>
             {ACTIVITY_EMOJI[moment.activity_type] ?? '📍'}
           </div>
 
           {/* Info */}
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold truncate" style={{ color: txt }}>
+            <p className="text-sm font-bold truncate" style={{ color: '#0F172A' }}>
               {moment.title}
             </p>
-            <p className="text-xs mt-0.5 truncate" style={{ color: sub }}>
+            <p className="text-xs mt-0.5 truncate" style={{ color: '#64748B' }}>
               📍 {moment.destination}
-              {dateStr && <span style={{ color: mut }}> · {dateStr}</span>}
+              {dateStr && <span style={{ color: '#94A3B8' }}> · {dateStr}</span>}
             </p>
           </div>
 
@@ -166,9 +230,7 @@ function MomentItem({
                 onClick={e => { e.stopPropagation(); handleChat() }}
                 disabled={chatting}
                 className="px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider focus:outline-none transition-colors"
-                style={hasImage
-                  ? { background: 'rgba(255,255,255,0.20)', color: 'white', cursor: 'pointer' }
-                  : { background: 'rgba(29,78,216,0.10)', color: '#1D4ED8', cursor: 'pointer' }}
+                style={{ background: 'rgba(29,78,216,0.10)', color: '#1D4ED8', cursor: 'pointer' }}
               >
                 {chatting ? '…' : 'Chat'}
               </button>
@@ -178,9 +240,7 @@ function MomentItem({
                 type="button"
                 onClick={e => { e.stopPropagation(); onDelete() }}
                 className="w-7 h-7 rounded-lg flex items-center justify-center focus:outline-none transition-colors"
-                style={hasImage
-                  ? { background: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.85)' }
-                  : { background: 'rgba(239,68,68,0.08)', color: '#EF4444' }}
+                style={{ background: 'rgba(239,68,68,0.08)', color: '#EF4444' }}
                 aria-label="Delete moment"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -190,14 +250,13 @@ function MomentItem({
             )}
             {!showChat && !onDelete && (
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                strokeWidth={2} style={{ color: hasImage ? 'rgba(255,255,255,0.5)' : '#CBD5E1' }}>
+                strokeWidth={2} style={{ color: '#CBD5E1' }}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
             )}
           </div>
         </div>
 
-        {/* Status badge — only shown in joined tab */}
         {moment.status && (
           <div className="mt-2.5 pl-14">
             <StatusBadge status={moment.status} />
@@ -224,7 +283,7 @@ export default function MyMoments({ userId, onOpenChat, onSelectMoment }: Props)
       setLoadingPosts(true)
       const { data } = await supabase
         .from('moments')
-        .select('id, title, destination, start_date, end_date, activity_type, image_url')
+        .select('id, title, destination, start_date, end_date, activity_type, image_url, description')
         .eq('creator_id', userId)
         .order('created_at', { ascending: false })
       setMyPosts((data as MomentCard[]) ?? [])
@@ -258,7 +317,7 @@ export default function MyMoments({ userId, onOpenChat, onSelectMoment }: Props)
 
       const { data } = await supabase
         .from('moments')
-        .select('id, title, destination, start_date, end_date, activity_type, image_url, creator_id, profiles!creator_id(full_name)')
+        .select('id, title, destination, start_date, end_date, activity_type, image_url, description, creator_id, profiles!creator_id(full_name)')
         .in('id', ids)
 
       // Preserve the request ordering (most recent first)

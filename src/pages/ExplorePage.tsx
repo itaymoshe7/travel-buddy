@@ -15,6 +15,7 @@ interface MomentRow {
   total_spots: number
   created_at: string
   image_url: string | null
+  description: string | null
   profiles: {
     full_name:   string | null
     avatar_url:  string | null
@@ -256,6 +257,7 @@ function MomentCard({
   const isAccepted = status === 'accepted'
   const spotsLeft  = moment.total_spots - acceptedCount
   const isFull     = spotsLeft <= 0
+  const hasImage   = !!moment.image_url
 
   async function handleSendRequest() {
     if (status || isOwn || isFull) return
@@ -273,48 +275,8 @@ function MomentCard({
     onToast('Request sent! ✈️', 'success')
   }
 
-  const creator  = moment.profiles
-  const dateStr  = formatDateRange(moment.start_date, moment.end_date)
-  const hasImage = !!moment.image_url
-  const txt = hasImage ? '#FFFFFF'                : '#0F172A'
-  const sub = hasImage ? 'rgba(255,255,255,0.85)' : '#64748B'
-  const mut = hasImage ? 'rgba(255,255,255,0.65)' : '#94A3B8'
-
-  const gender = creator?.gender ?? null
-  const cardBg = hasImage
-    ? undefined
-    : gender === 'female'
-      ? 'linear-gradient(145deg, #FCE4EC 0%, #FFFFFF 100%)'
-      : gender === 'male'
-        ? 'linear-gradient(145deg, #E0F7FA 0%, #FFFFFF 100%)'
-        : 'linear-gradient(145deg, rgba(253,242,248,0.9) 0%, rgba(239,246,255,0.9) 100%)'
-  const requestBtnColor =
-    gender === 'female' ? '#F472B6'
-    : gender === 'male'  ? '#1D4ED8'
-    : '#F472B6'
-
-  // Request button appearance
-  let requestBtnStyle: React.CSSProperties
-  let requestBtnLabel: string
-  if (isOwn) {
-    requestBtnStyle = { background: 'rgba(255,255,255,0.15)', color: hasImage ? 'rgba(255,255,255,0.6)' : '#94A3B8', cursor: 'not-allowed' }
-    requestBtnLabel = 'Your moment'
-  } else if (isAccepted) {
-    requestBtnStyle = { background: 'rgba(34,197,94,0.10)', color: '#16A34A', border: '1px solid rgba(34,197,94,0.25)', cursor: 'default' }
-    requestBtnLabel = '✓ Approved'
-  } else if (isPending) {
-    requestBtnStyle = { background: 'rgba(234,179,8,0.10)', color: hasImage ? '#FCD34D' : '#B45309', border: '1px solid rgba(234,179,8,0.25)', cursor: 'default' }
-    requestBtnLabel = '⏳ Pending'
-  } else if (status === 'declined') {
-    requestBtnStyle = { background: 'rgba(255,255,255,0.15)', color: hasImage ? 'rgba(255,255,255,0.6)' : '#94A3B8', cursor: 'not-allowed' }
-    requestBtnLabel = 'Declined'
-  } else if (isFull) {
-    requestBtnStyle = { background: 'rgba(255,255,255,0.15)', color: hasImage ? 'rgba(255,255,255,0.6)' : '#94A3B8', cursor: 'not-allowed' }
-    requestBtnLabel = 'Full'
-  } else {
-    requestBtnStyle = { background: hasImage ? 'rgba(255,255,255,0.20)' : requestBtnColor, color: hasImage ? 'white' : 'white' }
-    requestBtnLabel = requesting ? '…' : 'Send Request'
-  }
+  const creator = moment.profiles
+  const dateStr = formatDateRange(moment.start_date, moment.end_date)
 
   async function handleChat() {
     if (isOwn || chatting) return
@@ -331,92 +293,251 @@ function MomentCard({
     onOpenChat(chatId as string, creatorName)
   }
 
+  // ── Photo-hero layout (image_url present) ────────────────────────────────
+  if (hasImage) {
+    let reqBtnStyle: React.CSSProperties
+    let reqBtnLabel: string
+    if (isOwn) {
+      reqBtnStyle = { background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.45)', cursor: 'not-allowed' }
+      reqBtnLabel = 'Your moment'
+    } else if (isAccepted) {
+      reqBtnStyle = { background: 'rgba(34,197,94,0.22)', color: '#86EFAC', border: '1px solid rgba(34,197,94,0.35)', cursor: 'default' }
+      reqBtnLabel = '✓ Approved'
+    } else if (isPending) {
+      reqBtnStyle = { background: 'rgba(234,179,8,0.20)', color: '#FCD34D', border: '1px solid rgba(234,179,8,0.30)', cursor: 'default' }
+      reqBtnLabel = '⏳ Pending'
+    } else if (status === 'declined') {
+      reqBtnStyle = { background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.45)', cursor: 'not-allowed' }
+      reqBtnLabel = 'Declined'
+    } else if (isFull) {
+      reqBtnStyle = { background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.45)', cursor: 'not-allowed' }
+      reqBtnLabel = 'Full'
+    } else {
+      reqBtnStyle = { background: 'rgba(255,255,255,0.20)', color: 'white' }
+      reqBtnLabel = requesting ? '…' : 'Send Request'
+    }
+    const chatStyle: React.CSSProperties = !isOwn
+      ? { background: 'rgba(255,255,255,0.15)', color: 'white', cursor: 'pointer' }
+      : { background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.35)', cursor: 'not-allowed' }
+
+    return (
+      <div className="relative rounded-3xl overflow-hidden"
+        style={{ minHeight: 300, boxShadow: '0 4px 24px rgba(15,23,42,0.18), 0 1px 4px rgba(15,23,42,0.10)' }}>
+
+        {/* Full-bleed background image */}
+        <img
+          src={moment.image_url!}
+          alt={moment.title}
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+
+        {/* Gradient: heavy at bottom, fades to transparent at top */}
+        <div className="absolute inset-0"
+          style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.84) 0%, rgba(0,0,0,0.22) 55%, rgba(0,0,0,0.06) 100%)' }} />
+
+        {/* Content */}
+        <div className="relative z-10 flex flex-col justify-between p-5" style={{ minHeight: 300 }}>
+
+          {/* Top: creator row */}
+          <div className="flex items-center gap-2.5 cursor-pointer" onClick={onSelect}>
+            <Avatar url={creator?.avatar_url ?? null} name={creator?.full_name ?? null} />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-white truncate">
+                {creator?.full_name ?? 'Traveller'}
+              </p>
+              {creator?.social_link ? (
+                <a
+                  href={creator.social_link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs truncate block"
+                  style={{ color: 'rgba(255,255,255,0.55)' }}
+                  onClick={e => e.stopPropagation()}
+                >
+                  {(() => { try { return new URL(creator.social_link!).hostname.replace('www.', '') } catch { return creator.social_link } })()}
+                </a>
+              ) : creator?.bio ? (
+                <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.55)' }}>{creator.bio}</p>
+              ) : null}
+            </div>
+            <span className="text-xl leading-none" title={moment.activity_type}>
+              {ACTIVITY_EMOJI[moment.activity_type] ?? '📍'}
+            </span>
+          </div>
+
+          {/* Bottom: title, description, details, actions */}
+          <div>
+            <div className="cursor-pointer" onClick={onSelect}>
+              <h2 className="text-xl font-bold text-white leading-snug mb-1.5">
+                {moment.title}
+              </h2>
+
+              {moment.description && (
+                <p className="text-sm mb-3 line-clamp-2" style={{ color: 'rgba(255,255,255,0.72)' }}>
+                  {moment.description}
+                </p>
+              )}
+
+              {/* Details: destination · dates · spots as clean white text */}
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3 text-xs"
+                style={{ color: 'rgba(255,255,255,0.78)' }}>
+                <span>📍 {moment.destination}</span>
+                {dateStr && (
+                  <>
+                    <span style={{ color: 'rgba(255,255,255,0.28)' }}>·</span>
+                    <span>🗓 {dateStr}</span>
+                  </>
+                )}
+                <span style={{ color: 'rgba(255,255,255,0.28)' }}>·</span>
+                <span>{isFull ? '🔴 Full' : `👥 ${spotsLeft} spot${spotsLeft !== 1 ? 's' : ''} left`}</span>
+              </div>
+
+              {participants.length > 0 && (
+                <ParticipantAvatars participants={participants} mut="rgba(255,255,255,0.60)" />
+              )}
+
+              <p className="text-[11px] mt-1.5" style={{ color: 'rgba(255,255,255,0.38)' }}>
+                {timeAgo(moment.created_at)}
+              </p>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex gap-2 mt-4">
+              <button
+                type="button"
+                onClick={e => { e.stopPropagation(); handleSendRequest() }}
+                disabled={requesting || !!status || isOwn || isFull}
+                className="flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all focus:outline-none"
+                style={reqBtnStyle}
+              >
+                {reqBtnLabel}
+              </button>
+              <button
+                type="button"
+                onClick={e => { e.stopPropagation(); handleChat() }}
+                disabled={isOwn || chatting}
+                className="flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all focus:outline-none"
+                style={chatStyle}
+              >
+                {chatting ? '…' : 'Chat'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Standard card (no image) ──────────────────────────────────────────────
+  const gender = creator?.gender ?? null
+  const cardBg =
+    gender === 'female'
+      ? 'linear-gradient(145deg, #FCE4EC 0%, #FFFFFF 100%)'
+      : gender === 'male'
+        ? 'linear-gradient(145deg, #E0F7FA 0%, #FFFFFF 100%)'
+        : 'linear-gradient(145deg, rgba(253,242,248,0.9) 0%, rgba(239,246,255,0.9) 100%)'
+  const requestBtnColor =
+    gender === 'female' ? '#F472B6'
+    : gender === 'male'  ? '#1D4ED8'
+    : '#F472B6'
+
+  let requestBtnStyle: React.CSSProperties
+  let requestBtnLabel: string
+  if (isOwn) {
+    requestBtnStyle = { background: '#F1F5F9', color: '#94A3B8', cursor: 'not-allowed' }
+    requestBtnLabel = 'Your moment'
+  } else if (isAccepted) {
+    requestBtnStyle = { background: 'rgba(34,197,94,0.10)', color: '#16A34A', border: '1px solid rgba(34,197,94,0.25)', cursor: 'default' }
+    requestBtnLabel = '✓ Approved'
+  } else if (isPending) {
+    requestBtnStyle = { background: 'rgba(234,179,8,0.10)', color: '#B45309', border: '1px solid rgba(234,179,8,0.25)', cursor: 'default' }
+    requestBtnLabel = '⏳ Pending'
+  } else if (status === 'declined') {
+    requestBtnStyle = { background: '#F1F5F9', color: '#94A3B8', cursor: 'not-allowed' }
+    requestBtnLabel = 'Declined'
+  } else if (isFull) {
+    requestBtnStyle = { background: '#F1F5F9', color: '#94A3B8', cursor: 'not-allowed' }
+    requestBtnLabel = 'Full'
+  } else {
+    requestBtnStyle = { background: requestBtnColor, color: 'white' }
+    requestBtnLabel = requesting ? '…' : 'Send Request'
+  }
+
   const chatBtnActive = !isOwn
   const chatBtnStyle: React.CSSProperties = chatBtnActive
-    ? { background: hasImage ? 'rgba(255,255,255,0.15)' : 'rgba(29,78,216,0.10)', color: hasImage ? 'white' : '#1D4ED8', cursor: 'pointer' }
-    : { background: 'rgba(255,255,255,0.08)', color: hasImage ? 'rgba(255,255,255,0.35)' : '#CBD5E1', cursor: 'not-allowed' }
+    ? { background: 'rgba(29,78,216,0.10)', color: '#1D4ED8', cursor: 'pointer' }
+    : { background: '#F1F5F9', color: '#CBD5E1', cursor: 'not-allowed' }
 
   return (
     <div className="rounded-3xl overflow-hidden"
       style={{
-        background:         cardBg,
-        backgroundImage:    hasImage
-          ? `linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.72) 100%), url(${moment.image_url})`
-          : undefined,
-        backgroundSize:     hasImage ? 'cover'  : undefined,
-        backgroundPosition: hasImage ? 'center' : undefined,
+        background: cardBg,
         boxShadow: '0 2px 4px rgba(15,23,42,0.04), 0 8px 24px rgba(15,23,42,0.10), 0 24px 48px rgba(15,23,42,0.05)',
-        border: hasImage ? 'none' : '1px solid rgba(226,232,240,0.7)',
+        border: '1px solid rgba(226,232,240,0.7)',
       }}>
 
       <div className="p-5">
-        {/* Tappable area — opens detail view */}
         <div className="cursor-pointer" onClick={onSelect}>
-        {/* Top row: avatar + name + activity icon */}
-        <div className="flex items-center gap-3 mb-4">
-          <Avatar url={creator?.avatar_url ?? null} name={creator?.full_name ?? null} />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold truncate" style={{ color: txt }}>
-              {creator?.full_name ?? 'Traveller'}
-            </p>
-            {creator?.social_link ? (
-              <a
-                href={creator.social_link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs truncate block"
-                style={{ color: '#38BDF8' }}
-                onClick={e => e.stopPropagation()}
-              >
-                {(() => { try { return new URL(creator.social_link!).hostname.replace('www.', '') } catch { return creator.social_link } })()}
-              </a>
-            ) : creator?.bio ? (
-              <p className="text-xs truncate" style={{ color: mut }}>{creator.bio}</p>
-            ) : null}
-          </div>
-          <span className="text-xl leading-none" title={moment.activity_type}>
-            {ACTIVITY_EMOJI[moment.activity_type] ?? '📍'}
-          </span>
-        </div>
-
-        {/* Middle: title, destination + region badge, dates, spots */}
-        <div className="mb-1">
-          <h2 className="text-base font-bold leading-snug mb-1" style={{ color: txt }}>
-            {moment.title}
-          </h2>
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <p className="text-sm truncate" style={{ color: sub }}>
-                📍 {moment.destination}
-                {dateStr && <span className="ml-2" style={{ color: mut }}>· {dateStr}</span>}
+          {/* Top row: avatar + name + activity icon */}
+          <div className="flex items-center gap-3 mb-4">
+            <Avatar url={creator?.avatar_url ?? null} name={creator?.full_name ?? null} />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold truncate" style={{ color: '#0F172A' }}>
+                {creator?.full_name ?? 'Traveller'}
               </p>
-              {/* Region tag */}
-              {moment.region && moment.region !== 'Other' && (
-                <p className="text-[11px] mt-0.5 font-medium" style={{ color: mut }}>
-                  {regionLabel(moment.region)}
-                </p>
-              )}
+              {creator?.social_link ? (
+                <a
+                  href={creator.social_link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs truncate block"
+                  style={{ color: '#38BDF8' }}
+                  onClick={e => e.stopPropagation()}
+                >
+                  {(() => { try { return new URL(creator.social_link!).hostname.replace('www.', '') } catch { return creator.social_link } })()}
+                </a>
+              ) : creator?.bio ? (
+                <p className="text-xs truncate" style={{ color: '#94A3B8' }}>{creator.bio}</p>
+              ) : null}
             </div>
-            {/* Spots left badge */}
-            <span className="shrink-0 text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
-              style={isFull
-                ? { background: 'rgba(239,68,68,0.10)', color: hasImage ? '#FCA5A5' : '#DC2626' }
-                : { background: hasImage ? 'rgba(255,255,255,0.15)' : 'rgba(244,114,182,0.12)', color: hasImage ? 'white' : '#BE185D' }}>
-              {isFull ? 'Full' : `${spotsLeft} spot${spotsLeft !== 1 ? 's' : ''} left`}
+            <span className="text-xl leading-none" title={moment.activity_type}>
+              {ACTIVITY_EMOJI[moment.activity_type] ?? '📍'}
             </span>
           </div>
+
+          {/* Title + destination + region + spots */}
+          <div className="mb-1">
+            <h2 className="text-base font-bold leading-snug mb-1" style={{ color: '#0F172A' }}>
+              {moment.title}
+            </h2>
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-sm truncate" style={{ color: '#64748B' }}>
+                  📍 {moment.destination}
+                  {dateStr && <span className="ml-2" style={{ color: '#94A3B8' }}>· {dateStr}</span>}
+                </p>
+                {moment.region && moment.region !== 'Other' && (
+                  <p className="text-[11px] mt-0.5 font-medium" style={{ color: '#94A3B8' }}>
+                    {regionLabel(moment.region)}
+                  </p>
+                )}
+              </div>
+              <span className="shrink-0 text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
+                style={isFull
+                  ? { background: 'rgba(239,68,68,0.10)', color: '#DC2626' }
+                  : { background: 'rgba(244,114,182,0.12)', color: '#BE185D' }}>
+                {isFull ? 'Full' : `${spotsLeft} spot${spotsLeft !== 1 ? 's' : ''} left`}
+              </span>
+            </div>
+          </div>
+
+          <ParticipantAvatars participants={participants} />
+
+          <p className="text-[11px] mt-2.5" style={{ color: '#CBD5E1' }}>
+            Posted {formatPostedDate(moment.created_at)} · {timeAgo(moment.created_at)}
+          </p>
         </div>
 
-        {/* Participant avatars — social proof */}
-        <ParticipantAvatars participants={participants} mut={mut} />
-
-        {/* Posted timestamp */}
-        <p className="text-[11px] mt-2.5" style={{ color: mut }}>
-          Posted {formatPostedDate(moment.created_at)} · {timeAgo(moment.created_at)}
-        </p>
-        </div>{/* end tappable area */}
-
-        {/* Bottom: action buttons */}
         <div className="flex gap-2 mt-4">
           <button
             type="button"
@@ -484,6 +605,7 @@ export default function ExplorePage({ userId, onNotifications, onOpenChat, onSel
           total_spots,
           created_at,
           image_url,
+          description,
           profiles!creator_id (
             full_name,
             avatar_url,
