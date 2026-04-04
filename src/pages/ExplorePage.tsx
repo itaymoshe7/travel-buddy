@@ -251,6 +251,7 @@ function MomentCard({
 }) {
   const [requesting, setRequesting] = useState(false)
   const [chatting,   setChatting]   = useState(false)
+  const [menuOpen,   setMenuOpen]   = useState(false)
   const isOwn      = moment.creator_id === userId
   const status     = requestInfo?.status ?? null
   const isPending  = status === 'pending'
@@ -295,35 +296,12 @@ function MomentCard({
 
   // ── Photo-hero layout (image_url present) ────────────────────────────────
   if (hasImage) {
-    let reqBtnStyle: React.CSSProperties
-    let reqBtnLabel: string
-    if (isOwn) {
-      reqBtnStyle = { background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.45)', cursor: 'not-allowed' }
-      reqBtnLabel = 'Your moment'
-    } else if (isAccepted) {
-      reqBtnStyle = { background: 'rgba(34,197,94,0.22)', color: '#86EFAC', border: '1px solid rgba(34,197,94,0.35)', cursor: 'default' }
-      reqBtnLabel = '✓ Approved'
-    } else if (isPending) {
-      reqBtnStyle = { background: 'rgba(234,179,8,0.20)', color: '#FCD34D', border: '1px solid rgba(234,179,8,0.30)', cursor: 'default' }
-      reqBtnLabel = '⏳ Pending'
-    } else if (status === 'declined') {
-      reqBtnStyle = { background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.45)', cursor: 'not-allowed' }
-      reqBtnLabel = 'Declined'
-    } else if (isFull) {
-      reqBtnStyle = { background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.45)', cursor: 'not-allowed' }
-      reqBtnLabel = 'Full'
-    } else {
-      reqBtnStyle = { background: 'rgba(255,255,255,0.20)', color: 'white' }
-      reqBtnLabel = requesting ? '…' : 'Send Request'
-    }
-    const chatStyle: React.CSSProperties = !isOwn
-      ? { background: 'rgba(255,255,255,0.15)', color: 'white', cursor: 'pointer' }
-      : { background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.35)', cursor: 'not-allowed' }
-
     return (
-      <div className="relative rounded-3xl overflow-hidden"
-        style={{ minHeight: 300, boxShadow: '0 4px 24px rgba(15,23,42,0.18), 0 1px 4px rgba(15,23,42,0.10)' }}>
-
+      <div
+        className="relative rounded-3xl overflow-hidden cursor-pointer"
+        style={{ minHeight: 300, boxShadow: '0 4px 24px rgba(15,23,42,0.18), 0 1px 4px rgba(15,23,42,0.10)' }}
+        onClick={() => { setMenuOpen(false); onSelect() }}
+      >
         {/* Full-bleed background image */}
         <img
           src={moment.image_url!}
@@ -331,15 +309,15 @@ function MomentCard({
           className="absolute inset-0 w-full h-full object-cover"
         />
 
-        {/* Gradient: heavy at bottom, fades to transparent at top */}
+        {/* Gradient: from-black/90 via-black/50 to-transparent */}
         <div className="absolute inset-0"
-          style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.90) 0%, rgba(0,0,0,0.30) 50%, transparent 100%)' }} />
+          style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.90) 0%, rgba(0,0,0,0.50) 50%, transparent 100%)' }} />
 
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-between p-5" style={{ minHeight: 300 }}>
 
-          {/* Top: creator row */}
-          <div className="flex items-center gap-2.5 cursor-pointer" onClick={onSelect}>
+          {/* Top: creator row + three-dots menu */}
+          <div className="flex items-center gap-2.5">
             <Avatar url={creator?.avatar_url ?? null} name={creator?.full_name ?? null} />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-white truncate">
@@ -360,68 +338,96 @@ function MomentCard({
                 <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.55)' }}>{creator.bio}</p>
               ) : null}
             </div>
-            <span className="text-xl leading-none" title={moment.activity_type}>
-              {ACTIVITY_EMOJI[moment.activity_type] ?? '📍'}
-            </span>
+
+            {/* Three-dots menu */}
+            <div
+              className="relative shrink-0"
+              tabIndex={-1}
+              onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setMenuOpen(false) }}
+            >
+              <button
+                type="button"
+                onClick={e => { e.stopPropagation(); setMenuOpen(v => !v) }}
+                className="w-8 h-8 rounded-full flex items-center justify-center focus:outline-none"
+                style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)' }}
+                aria-label="Options"
+              >
+                <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <circle cx="10" cy="4"  r="1.5" />
+                  <circle cx="10" cy="10" r="1.5" />
+                  <circle cx="10" cy="16" r="1.5" />
+                </svg>
+              </button>
+
+              {menuOpen && (
+                <div
+                  className="absolute top-full right-0 mt-1.5 w-44 rounded-2xl overflow-hidden z-20"
+                  style={{
+                    background: 'rgba(15,23,42,0.88)',
+                    backdropFilter: 'blur(16px)',
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.30)',
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={e => { e.stopPropagation(); setMenuOpen(false); onSelect() }}
+                    className="w-full px-4 py-3 text-left text-sm font-medium text-white transition-colors focus:outline-none"
+                    style={{ background: 'transparent' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    View Details
+                  </button>
+                  {isOwn && (
+                    <button
+                      type="button"
+                      onClick={e => { e.stopPropagation(); setMenuOpen(false); onSelect() }}
+                      className="w-full px-4 py-3 text-left text-sm font-medium text-white transition-colors focus:outline-none"
+                      style={{ background: 'transparent', borderTop: '1px solid rgba(255,255,255,0.10)' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      Edit Moment
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Bottom: title, description, details, actions */}
+          {/* Bottom: title, description, details, participants, time */}
           <div>
-            <div className="cursor-pointer" onClick={onSelect}>
-              <h2 className="text-xl font-bold text-white leading-snug mb-1.5">
-                {moment.title}
-              </h2>
+            <h2 className="text-xl font-bold text-white leading-snug mb-1.5">
+              {moment.title}
+            </h2>
 
-              {moment.description && (
-                <p className="text-sm mb-3 line-clamp-2" style={{ color: 'rgba(255,255,255,0.72)' }}>
-                  {moment.description}
-                </p>
-              )}
-
-              {/* Details: destination · dates · spots as clean white text */}
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3 text-xs"
-                style={{ color: 'rgba(255,255,255,0.78)' }}>
-                <span>📍 {moment.destination}</span>
-                {dateStr && (
-                  <>
-                    <span style={{ color: 'rgba(255,255,255,0.28)' }}>·</span>
-                    <span>🗓 {dateStr}</span>
-                  </>
-                )}
-                <span style={{ color: 'rgba(255,255,255,0.28)' }}>·</span>
-                <span>{isFull ? '🔴 Full' : `👥 ${spotsLeft} spot${spotsLeft !== 1 ? 's' : ''} left`}</span>
-              </div>
-
-              {participants.length > 0 && (
-                <ParticipantAvatars participants={participants} mut="rgba(255,255,255,0.60)" />
-              )}
-
-              <p className="text-[11px] mt-1.5" style={{ color: 'rgba(255,255,255,0.38)' }}>
-                {timeAgo(moment.created_at)}
+            {moment.description && (
+              <p className="text-sm mb-3 line-clamp-2" style={{ color: 'rgba(255,255,255,0.80)' }}>
+                {moment.description}
               </p>
+            )}
+
+            {/* Details: destination · dates · spots — pure white medium weight */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3 text-xs font-medium text-white">
+              <span>📍 {moment.destination}</span>
+              {dateStr && (
+                <>
+                  <span style={{ color: 'rgba(255,255,255,0.35)' }}>·</span>
+                  <span>🗓 {dateStr}</span>
+                </>
+              )}
+              <span style={{ color: 'rgba(255,255,255,0.35)' }}>·</span>
+              <span>{isFull ? '🔴 Full' : `👥 ${spotsLeft} spot${spotsLeft !== 1 ? 's' : ''} left`}</span>
             </div>
 
-            {/* Action buttons */}
-            <div className="flex gap-2 mt-4">
-              <button
-                type="button"
-                onClick={e => { e.stopPropagation(); handleSendRequest() }}
-                disabled={requesting || !!status || isOwn || isFull}
-                className="flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all focus:outline-none"
-                style={reqBtnStyle}
-              >
-                {reqBtnLabel}
-              </button>
-              <button
-                type="button"
-                onClick={e => { e.stopPropagation(); handleChat() }}
-                disabled={isOwn || chatting}
-                className="flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all focus:outline-none"
-                style={chatStyle}
-              >
-                {chatting ? '…' : 'Chat'}
-              </button>
-            </div>
+            {participants.length > 0 && (
+              <ParticipantAvatars participants={participants} mut="rgba(255,255,255,0.60)" />
+            )}
+
+            <p className="text-[11px] mt-1.5" style={{ color: 'rgba(255,255,255,0.38)' }}>
+              {timeAgo(moment.created_at)}
+            </p>
           </div>
         </div>
       </div>
@@ -698,8 +704,8 @@ export default function ExplorePage({ userId, onNotifications, onOpenChat, onSel
     <div className="relative min-h-screen" style={{ background: 'transparent' }}>
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div className="sticky top-0 z-10 px-5 pt-5 pb-0"
-        style={{ background: 'rgba(240,253,252,0.92)', backdropFilter: 'blur(12px)' }}>
+      <div className="sticky top-0 z-30 px-5 pt-5 pb-0"
+        style={{ background: '#F0FDFC', boxShadow: '0 1px 0 rgba(226,232,240,0.8), 0 2px 8px rgba(15,23,42,0.04)' }}>
 
         {/* Label row + bell */}
         <div className="flex items-start justify-between mb-1">
