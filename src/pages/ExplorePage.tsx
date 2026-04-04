@@ -333,7 +333,7 @@ function MomentCard({
 
         {/* Gradient: heavy at bottom, fades to transparent at top */}
         <div className="absolute inset-0"
-          style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.84) 0%, rgba(0,0,0,0.22) 55%, rgba(0,0,0,0.06) 100%)' }} />
+          style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.90) 0%, rgba(0,0,0,0.30) 50%, transparent 100%)' }} />
 
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-between p-5" style={{ minHeight: 300 }}>

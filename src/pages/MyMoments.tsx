@@ -134,7 +134,7 @@ function MomentItem({
 
         {/* Gradient overlay */}
         <div className="absolute inset-0"
-          style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.80) 0%, rgba(0,0,0,0.18) 60%, rgba(0,0,0,0.04) 100%)' }} />
+          style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.90) 0%, rgba(0,0,0,0.30) 50%, transparent 100%)' }} />
 
         {/* Floating actions — top right */}
         <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5">
