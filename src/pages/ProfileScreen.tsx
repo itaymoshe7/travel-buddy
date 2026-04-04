@@ -30,6 +30,14 @@ interface RecentMoment {
   start_date:    string | null
 }
 
+interface JoinedMoment {
+  id:            string
+  title:         string
+  destination:   string
+  activity_type: string
+  start_date:    string | null
+}
+
 interface Props {
   userId:   string
   onLogOut: () => void
@@ -101,7 +109,8 @@ function Section({ label, children }: { label: string; children: React.ReactNode
 export default function ProfileScreen({ userId, onLogOut }: Props) {
   const [profile,       setProfile]       = useState<Profile | null>(null)
   const [stats,         setStats]         = useState<Stats>({ joinedLabel: '—', created: 0, joined: 0 })
-  const [recentMoments, setRecentMoments] = useState<RecentMoment[]>([])
+  const [recentMoments,  setRecentMoments]  = useState<RecentMoment[]>([])
+  const [joinedMoments,  setJoinedMoments]  = useState<JoinedMoment[]>([])
   const [bio,           setBio]           = useState('')
   const [bioFocus,      setBioFocus]      = useState(false)
   const [savingBio,     setSavingBio]     = useState(false)
@@ -110,7 +119,7 @@ export default function ProfileScreen({ userId, onLogOut }: Props) {
 
   useEffect(() => {
     async function load() {
-      const [profileRes, createdRes, joinedRes, momentsRes] = await Promise.all([
+      const [profileRes, createdRes, joinedRes, momentsRes, joinedMomentsRes] = await Promise.all([
         supabase
           .from('profiles')
           .select('full_name, email, social_link, bio, avatar_url, travel_region, travel_vibe, gender, age, created_at')
@@ -134,6 +143,14 @@ export default function ProfileScreen({ userId, onLogOut }: Props) {
           .eq('creator_id', userId)
           .order('created_at', { ascending: false })
           .limit(3),
+
+        supabase
+          .from('moment_requests')
+          .select('moments!moment_id(id, title, destination, activity_type, start_date)')
+          .eq('user_id', userId)
+          .eq('status', 'accepted')
+          .order('created_at', { ascending: false })
+          .limit(10),
       ])
 
       if (profileRes.data) {
@@ -147,6 +164,14 @@ export default function ProfileScreen({ userId, onLogOut }: Props) {
         })
       }
       setRecentMoments((momentsRes.data as RecentMoment[]) ?? [])
+
+      // Supabase returns the FK join as an array even for many-to-one — unwrap it
+      type RawJoined = { moments: JoinedMoment | JoinedMoment[] | null }
+      const joined = ((joinedMomentsRes.data as RawJoined[]) ?? [])
+        .map(r => (Array.isArray(r.moments) ? r.moments[0] : r.moments))
+        .filter(Boolean) as JoinedMoment[]
+      setJoinedMoments(joined)
+
       setLoading(false)
     }
     load()
@@ -265,6 +290,47 @@ export default function ProfileScreen({ userId, onLogOut }: Props) {
           />
           {savingBio && (
             <p className="text-[11px] text-right mt-1" style={{ color: '#64748B' }}>Saving…</p>
+          )}
+        </Section>
+
+        {/* ── My Journeys ─────────────────────────────────────────────────── */}
+        <Section label="My Journeys">
+          {joinedMoments.length === 0 ? (
+            <p className="text-sm text-center py-2" style={{ color: '#94A3B8' }}>
+              No approved journeys yet — start exploring!
+            </p>
+          ) : (
+            <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1"
+              style={{ scrollbarWidth: 'none' }}>
+              {joinedMoments.map(m => (
+                <div key={m.id} className="shrink-0 w-36 rounded-2xl p-3 flex flex-col gap-2"
+                  style={{
+                    background: 'linear-gradient(145deg,rgba(239,246,255,0.9),rgba(220,252,231,0.6))',
+                    border: '1px solid rgba(134,239,172,0.35)',
+                    boxShadow: '0 2px 8px rgba(15,23,42,0.06)',
+                  }}>
+                  {/* Activity bubble */}
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center text-base shrink-0"
+                    style={{ background: 'white', boxShadow: '0 1px 4px rgba(15,23,42,0.08)' }}>
+                    {ACTIVITY_EMOJI[m.activity_type] ?? '📍'}
+                  </div>
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold leading-snug line-clamp-2" style={{ color: '#0F172A' }}>
+                      {m.title}
+                    </p>
+                    <p className="text-[11px] mt-1 truncate" style={{ color: '#64748B' }}>
+                      📍 {m.destination}
+                    </p>
+                    {m.start_date && (
+                      <p className="text-[11px] mt-0.5" style={{ color: '#94A3B8' }}>
+                        {formatDate(m.start_date)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </Section>
 

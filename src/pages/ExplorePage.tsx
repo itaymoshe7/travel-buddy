@@ -13,6 +13,7 @@ interface MomentRow {
   activity_type: string
   creator_id: string
   total_spots: number
+  created_at: string
   profiles: {
     full_name:   string | null
     avatar_url:  string | null
@@ -88,6 +89,24 @@ function formatDateRange(start: string | null, end: string | null): string {
 function initials(name: string | null): string {
   if (!name) return '?'
   return name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
+}
+
+function timeAgo(ts: string): string {
+  const diff  = Date.now() - new Date(ts).getTime()
+  const mins  = Math.floor(diff / 60_000)
+  const hours = Math.floor(diff / 3_600_000)
+  const days  = Math.floor(diff / 86_400_000)
+  const weeks = Math.floor(days / 7)
+  if (mins  <  1) return 'just now'
+  if (mins  < 60) return `${mins}m ago`
+  if (hours < 24) return `${hours}h ago`
+  if (days  <  7) return `${days}d ago`
+  if (weeks <  5) return `${weeks}w ago`
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(ts))
+}
+
+function formatPostedDate(ts: string): string {
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(ts))
 }
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
@@ -369,6 +388,11 @@ function MomentCard({
 
         {/* Participant avatars — social proof */}
         <ParticipantAvatars participants={participants} />
+
+        {/* Posted timestamp */}
+        <p className="text-[11px] mt-2.5" style={{ color: '#CBD5E1' }}>
+          Posted {formatPostedDate(moment.created_at)} · {timeAgo(moment.created_at)}
+        </p>
         </div>{/* end tappable area */}
 
         {/* Bottom: action buttons */}
@@ -437,6 +461,7 @@ export default function ExplorePage({ userId, onNotifications, onOpenChat, onSel
           activity_type,
           creator_id,
           total_spots,
+          created_at,
           profiles!creator_id (
             full_name,
             avatar_url,

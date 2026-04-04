@@ -201,7 +201,7 @@ export default function ChatRoom({ chatId, userId, otherUserName, onBack }: Prop
                   : 'bg-slate-100 text-text-main rounded-bl-md'}`}
               >
                 <p>{msg.content}</p>
-                <p className={`text-[10px] mt-1.5 ${isMine ? 'text-blue-200' : 'text-slate-400'} text-right`}>
+                <p className={`text-[10px] mt-1.5 ${isMine ? 'text-white opacity-75' : 'text-slate-400'} text-right`}>
                   {formatTime(msg.created_at)}
                 </p>
               </div>
