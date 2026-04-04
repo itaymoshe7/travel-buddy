@@ -309,9 +309,9 @@ function MomentCard({
           className="absolute inset-0 w-full h-full object-cover"
         />
 
-        {/* Gradient: from-black/90 via-black/50 to-transparent */}
+        {/* Gradient: from-black/80 via-black/40 to-transparent */}
         <div className="absolute inset-0"
-          style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.90) 0%, rgba(0,0,0,0.50) 50%, transparent 100%)' }} />
+          style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.40) 55%, transparent 100%)' }} />
 
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-between p-5" style={{ minHeight: 300 }}>
@@ -320,7 +320,7 @@ function MomentCard({
           <div className="flex items-center gap-2.5">
             <Avatar url={creator?.avatar_url ?? null} name={creator?.full_name ?? null} />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white truncate">
+              <p className="text-sm font-semibold truncate" style={{ color: '#FFFFFF' }}>
                 {creator?.full_name ?? 'Traveller'}
               </p>
               {creator?.social_link ? (
@@ -398,18 +398,18 @@ function MomentCard({
 
           {/* Bottom: title, description, details, participants, time */}
           <div>
-            <h2 className="text-xl font-bold text-white leading-snug mb-1.5">
+            <h2 className="text-xl font-bold leading-snug mb-1.5" style={{ color: '#FFFFFF' }}>
               {moment.title}
             </h2>
 
             {moment.description && (
-              <p className="text-sm mb-3 line-clamp-2" style={{ color: 'rgba(255,255,255,0.80)' }}>
+              <p className="text-sm mb-3 line-clamp-2" style={{ color: '#FFFFFF' }}>
                 {moment.description}
               </p>
             )}
 
             {/* Details: destination · dates · spots — pure white medium weight */}
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3 text-xs font-medium text-white">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3 text-xs font-medium" style={{ color: '#FFFFFF' }}>
               <span>📍 {moment.destination}</span>
               {dateStr && (
                 <>
