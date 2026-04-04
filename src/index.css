@@ -8,7 +8,7 @@
   /* Core palette */
   --color-primary:      #1D4ED8; /* deep blue  — buttons, links, focus rings  */
   --color-accent-pink:  #F472B6; /* magenta    — active states, icons, badges */
-  --color-bg-base:      #F8FAFC; /* airy white — app background               */
+  --color-bg-base:      #F0FDFC; /* soft cyan — app background                */
   --color-text-main:    #0F172A; /* near-black — headings and body copy        */
   --color-text-sub:     #64748B; /* slate gray — subtitles and captions        */
 
@@ -20,10 +20,20 @@
 /* ─── User Card ──────────────────────────────────────────────────────────── */
 @utility user-card {
   background-color: var(--color-surface);
-  border-radius:    1rem;                                    /* rounded-2xl   */
+  border-radius:    1.5rem;                                  /* rounded-3xl   */
   box-shadow:
-    0 1px 2px rgba(15, 23, 42, 0.04),
-    0 4px 12px rgba(15, 23, 42, 0.06);
+    0 2px 4px rgba(15, 23, 42, 0.04),
+    0 8px 24px rgba(15, 23, 42, 0.10),
+    0 24px 48px rgba(15, 23, 42, 0.06);
+}
+
+@utility card-float {
+  background-color: white;
+  border-radius:    1.5rem;
+  box-shadow:
+    0 2px 4px rgba(15, 23, 42, 0.04),
+    0 8px 24px rgba(15, 23, 42, 0.10),
+    0 24px 48px rgba(15, 23, 42, 0.06);
 }
 
 /* ─── Global Base ────────────────────────────────────────────────────────── */
@@ -54,6 +64,7 @@ html, body {
   margin: 0;
   padding: 0;
   min-height: 100svh;
+  background: linear-gradient(170deg, #E0F2F1 0%, #F0FDFC 45%, #FFFFFF 100%) fixed;
 }
 
 #root {

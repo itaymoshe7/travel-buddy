@@ -83,7 +83,11 @@ function TabButton({ tab, active, onClick }: {
 export default function BottomNav({ active, onChange, onAdd }: Props) {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40"
-      style={{ background: 'white', borderTop: '1px solid #F1F5F9' }}>
+      style={{
+        background: 'rgba(255,255,255,0.88)',
+        backdropFilter: 'blur(20px)',
+        boxShadow: '0 -1px 0 rgba(226,232,240,0.6), 0 -8px 24px rgba(15,23,42,0.04)',
+      }}>
 
       <div className="flex items-center max-w-lg mx-auto px-2" style={{ height: '64px' }}>
 
@@ -108,8 +112,8 @@ export default function BottomNav({ active, onChange, onAdd }: Props) {
               width:     '56px',
               height:    '56px',
               borderRadius: '9999px',
-              background:   '#1D4ED8',
-              boxShadow:    '0 4px 20px rgba(29,78,216,0.40)',
+              background:   'linear-gradient(135deg, #1D4ED8 0%, #0D9488 100%)',
+              boxShadow:    '0 4px 24px rgba(13,148,136,0.40), 0 2px 8px rgba(29,78,216,0.25)',
               bottom:       '12px',   // pops above the bar
             }}
           >

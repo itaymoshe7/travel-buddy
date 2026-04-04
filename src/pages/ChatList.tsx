@@ -130,11 +130,11 @@ export default function ChatList({ userId, onOpenChat }: Props) {
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen" style={{ background: '#F8FAFC' }}>
+    <div className="min-h-screen" style={{ background: 'transparent' }}>
 
       {/* Header */}
       <div className="sticky top-0 z-10 px-5 pt-5 pb-3"
-        style={{ background: 'rgba(248,250,252,0.92)', backdropFilter: 'blur(12px)' }}>
+        style={{ background: 'rgba(240,253,252,0.92)', backdropFilter: 'blur(12px)' }}>
         <p className="text-[11px] font-semibold uppercase tracking-widest mb-1" style={{ color: '#94A3B8' }}>
           Messages
         </p>

@@ -14,6 +14,7 @@ interface MomentRow {
   creator_id: string
   total_spots: number
   created_at: string
+  image_url: string | null
   profiles: {
     full_name:   string | null
     avatar_url:  string | null
@@ -159,7 +160,7 @@ function Avatar({ url, name }: { url: string | null; name: string | null }) {
 
 const MAX_SHOWN = 3
 
-function ParticipantAvatars({ participants }: { participants: Participant[] }) {
+function ParticipantAvatars({ participants, mut = '#94A3B8' }: { participants: Participant[]; mut?: string }) {
   if (participants.length === 0) return null
   const shown = participants.slice(0, MAX_SHOWN)
   const extra = participants.length - MAX_SHOWN
@@ -205,13 +206,23 @@ function ParticipantAvatars({ participants }: { participants: Participant[] }) {
           </div>
         )}
       </div>
-      <p className="text-[11px]" style={{ color: '#94A3B8' }}>
+      <p className="text-[11px]" style={{ color: mut }}>
         {participants.length === 1
           ? `${participants[0].full_name ?? 'Someone'} joined`
           : `${participants.length} travellers joined`}
       </p>
     </div>
   )
+}
+
+// ─── Activity pill colours ────────────────────────────────────────────────────
+
+const ACTIVITY_PILL_COLORS: Record<ActivityFilter, string> = {
+  all:       '#1D4ED8',
+  stay:      '#EA580C',
+  trip:      '#059669',
+  landing:   '#7C3AED',
+  nightlife: '#DB2777',
 }
 
 // ─── Moment Card ──────────────────────────────────────────────────────────────
@@ -262,12 +273,17 @@ function MomentCard({
     onToast('Request sent! ✈️', 'success')
   }
 
-  const creator = moment.profiles
-  const dateStr = formatDateRange(moment.start_date, moment.end_date)
+  const creator  = moment.profiles
+  const dateStr  = formatDateRange(moment.start_date, moment.end_date)
+  const hasImage = !!moment.image_url
+  const txt = hasImage ? '#FFFFFF'                : '#0F172A'
+  const sub = hasImage ? 'rgba(255,255,255,0.85)' : '#64748B'
+  const mut = hasImage ? 'rgba(255,255,255,0.65)' : '#94A3B8'
 
   const gender = creator?.gender ?? null
-  const cardBg =
-    gender === 'female'
+  const cardBg = hasImage
+    ? undefined
+    : gender === 'female'
       ? 'linear-gradient(145deg, #FCE4EC 0%, #FFFFFF 100%)'
       : gender === 'male'
         ? 'linear-gradient(145deg, #E0F7FA 0%, #FFFFFF 100%)'
@@ -281,22 +297,22 @@ function MomentCard({
   let requestBtnStyle: React.CSSProperties
   let requestBtnLabel: string
   if (isOwn) {
-    requestBtnStyle = { background: '#F1F5F9', color: '#94A3B8', cursor: 'not-allowed' }
+    requestBtnStyle = { background: 'rgba(255,255,255,0.15)', color: hasImage ? 'rgba(255,255,255,0.6)' : '#94A3B8', cursor: 'not-allowed' }
     requestBtnLabel = 'Your moment'
   } else if (isAccepted) {
     requestBtnStyle = { background: 'rgba(34,197,94,0.10)', color: '#16A34A', border: '1px solid rgba(34,197,94,0.25)', cursor: 'default' }
     requestBtnLabel = '✓ Approved'
   } else if (isPending) {
-    requestBtnStyle = { background: 'rgba(234,179,8,0.10)', color: '#B45309', border: '1px solid rgba(234,179,8,0.25)', cursor: 'default' }
+    requestBtnStyle = { background: 'rgba(234,179,8,0.10)', color: hasImage ? '#FCD34D' : '#B45309', border: '1px solid rgba(234,179,8,0.25)', cursor: 'default' }
     requestBtnLabel = '⏳ Pending'
   } else if (status === 'declined') {
-    requestBtnStyle = { background: '#F1F5F9', color: '#94A3B8', cursor: 'not-allowed' }
+    requestBtnStyle = { background: 'rgba(255,255,255,0.15)', color: hasImage ? 'rgba(255,255,255,0.6)' : '#94A3B8', cursor: 'not-allowed' }
     requestBtnLabel = 'Declined'
   } else if (isFull) {
-    requestBtnStyle = { background: '#F1F5F9', color: '#94A3B8', cursor: 'not-allowed' }
+    requestBtnStyle = { background: 'rgba(255,255,255,0.15)', color: hasImage ? 'rgba(255,255,255,0.6)' : '#94A3B8', cursor: 'not-allowed' }
     requestBtnLabel = 'Full'
   } else {
-    requestBtnStyle = { background: requestBtnColor, color: 'white' }
+    requestBtnStyle = { background: hasImage ? 'rgba(255,255,255,0.20)' : requestBtnColor, color: hasImage ? 'white' : 'white' }
     requestBtnLabel = requesting ? '…' : 'Send Request'
   }
 
@@ -317,15 +333,20 @@ function MomentCard({
 
   const chatBtnActive = !isOwn
   const chatBtnStyle: React.CSSProperties = chatBtnActive
-    ? { background: 'rgba(29,78,216,0.10)', color: '#1D4ED8', cursor: 'pointer' }
-    : { background: '#F1F5F9', color: '#CBD5E1', cursor: 'not-allowed' }
+    ? { background: hasImage ? 'rgba(255,255,255,0.15)' : 'rgba(29,78,216,0.10)', color: hasImage ? 'white' : '#1D4ED8', cursor: 'pointer' }
+    : { background: 'rgba(255,255,255,0.08)', color: hasImage ? 'rgba(255,255,255,0.35)' : '#CBD5E1', cursor: 'not-allowed' }
 
   return (
-    <div className="rounded-2xl overflow-hidden"
+    <div className="rounded-3xl overflow-hidden"
       style={{
-        background:  cardBg,
-        boxShadow:   '0 2px 12px rgba(15,23,42,0.07), 0 1px 3px rgba(15,23,42,0.05)',
-        border:      '1px solid rgba(226,232,240,0.7)',
+        background:         cardBg,
+        backgroundImage:    hasImage
+          ? `linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.72) 100%), url(${moment.image_url})`
+          : undefined,
+        backgroundSize:     hasImage ? 'cover'  : undefined,
+        backgroundPosition: hasImage ? 'center' : undefined,
+        boxShadow: '0 2px 4px rgba(15,23,42,0.04), 0 8px 24px rgba(15,23,42,0.10), 0 24px 48px rgba(15,23,42,0.05)',
+        border: hasImage ? 'none' : '1px solid rgba(226,232,240,0.7)',
       }}>
 
       <div className="p-5">
@@ -335,7 +356,7 @@ function MomentCard({
         <div className="flex items-center gap-3 mb-4">
           <Avatar url={creator?.avatar_url ?? null} name={creator?.full_name ?? null} />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold truncate" style={{ color: '#0F172A' }}>
+            <p className="text-sm font-semibold truncate" style={{ color: txt }}>
               {creator?.full_name ?? 'Traveller'}
             </p>
             {creator?.social_link ? (
@@ -350,7 +371,7 @@ function MomentCard({
                 {(() => { try { return new URL(creator.social_link!).hostname.replace('www.', '') } catch { return creator.social_link } })()}
               </a>
             ) : creator?.bio ? (
-              <p className="text-xs truncate" style={{ color: '#94A3B8' }}>{creator.bio}</p>
+              <p className="text-xs truncate" style={{ color: mut }}>{creator.bio}</p>
             ) : null}
           </div>
           <span className="text-xl leading-none" title={moment.activity_type}>
@@ -360,18 +381,18 @@ function MomentCard({
 
         {/* Middle: title, destination + region badge, dates, spots */}
         <div className="mb-1">
-          <h2 className="text-base font-bold leading-snug mb-1" style={{ color: '#0F172A' }}>
+          <h2 className="text-base font-bold leading-snug mb-1" style={{ color: txt }}>
             {moment.title}
           </h2>
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="text-sm truncate" style={{ color: '#64748B' }}>
+              <p className="text-sm truncate" style={{ color: sub }}>
                 📍 {moment.destination}
-                {dateStr && <span className="ml-2" style={{ color: '#94A3B8' }}>· {dateStr}</span>}
+                {dateStr && <span className="ml-2" style={{ color: mut }}>· {dateStr}</span>}
               </p>
               {/* Region tag */}
               {moment.region && moment.region !== 'Other' && (
-                <p className="text-[11px] mt-0.5 font-medium" style={{ color: '#94A3B8' }}>
+                <p className="text-[11px] mt-0.5 font-medium" style={{ color: mut }}>
                   {regionLabel(moment.region)}
                 </p>
               )}
@@ -379,18 +400,18 @@ function MomentCard({
             {/* Spots left badge */}
             <span className="shrink-0 text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
               style={isFull
-                ? { background: 'rgba(239,68,68,0.10)', color: '#DC2626' }
-                : { background: 'rgba(244,114,182,0.12)', color: '#BE185D' }}>
+                ? { background: 'rgba(239,68,68,0.10)', color: hasImage ? '#FCA5A5' : '#DC2626' }
+                : { background: hasImage ? 'rgba(255,255,255,0.15)' : 'rgba(244,114,182,0.12)', color: hasImage ? 'white' : '#BE185D' }}>
               {isFull ? 'Full' : `${spotsLeft} spot${spotsLeft !== 1 ? 's' : ''} left`}
             </span>
           </div>
         </div>
 
         {/* Participant avatars — social proof */}
-        <ParticipantAvatars participants={participants} />
+        <ParticipantAvatars participants={participants} mut={mut} />
 
         {/* Posted timestamp */}
-        <p className="text-[11px] mt-2.5" style={{ color: '#CBD5E1' }}>
+        <p className="text-[11px] mt-2.5" style={{ color: mut }}>
           Posted {formatPostedDate(moment.created_at)} · {timeAgo(moment.created_at)}
         </p>
         </div>{/* end tappable area */}
@@ -462,6 +483,7 @@ export default function ExplorePage({ userId, onNotifications, onOpenChat, onSel
           creator_id,
           total_spots,
           created_at,
+          image_url,
           profiles!creator_id (
             full_name,
             avatar_url,
@@ -551,11 +573,11 @@ export default function ExplorePage({ userId, onNotifications, onOpenChat, onSel
   // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
-    <div className="relative min-h-screen" style={{ background: '#F8FAFC' }}>
+    <div className="relative min-h-screen" style={{ background: 'transparent' }}>
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="sticky top-0 z-10 px-5 pt-5 pb-0"
-        style={{ background: 'rgba(248,250,252,0.92)', backdropFilter: 'blur(12px)' }}>
+        style={{ background: 'rgba(240,253,252,0.92)', backdropFilter: 'blur(12px)' }}>
 
         {/* Label row + bell */}
         <div className="flex items-start justify-between mb-1">
@@ -600,7 +622,7 @@ export default function ExplorePage({ userId, onNotifications, onOpenChat, onSel
               className="shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold transition-all focus:outline-none"
               style={
                 activityFilter === f.id
-                  ? { background: '#1D4ED8', color: 'white', border: '1px solid #1D4ED8' }
+                  ? { background: ACTIVITY_PILL_COLORS[f.id], color: 'white', border: `1px solid ${ACTIVITY_PILL_COLORS[f.id]}` }
                   : { background: 'white', color: '#64748B', border: '1px solid #E2E8F0' }
               }
             >

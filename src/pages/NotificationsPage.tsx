@@ -162,11 +162,11 @@ export default function NotificationsPage({ userId, onBack, onOpenChat }: Props)
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen pb-10" style={{ background: '#F8FAFC' }}>
+    <div className="min-h-screen pb-10" style={{ background: 'transparent' }}>
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="sticky top-0 z-10 px-5 pt-5 pb-3"
-        style={{ background: 'rgba(248,250,252,0.92)', backdropFilter: 'blur(12px)' }}>
+        style={{ background: 'rgba(240,253,252,0.92)', backdropFilter: 'blur(12px)' }}>
 
         <div className="flex items-start justify-between mb-1">
           <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: '#94A3B8' }}>
@@ -246,7 +246,8 @@ export default function NotificationsPage({ userId, onBack, onOpenChat }: Props)
                 const name = req.profiles?.full_name ?? 'A traveller'
                 const title = req.moments?.title ?? 'your moment'
                 return (
-                  <div key={req.id} className="user-card p-5">
+                  <div key={req.id} className="user-card p-5"
+                    style={{ borderRadius: '1.5rem', boxShadow: '0 2px 4px rgba(15,23,42,0.04), 0 8px 24px rgba(15,23,42,0.10)' }}>
                     <div className="flex items-start gap-3 mb-4">
                       <Avatar url={req.profiles?.avatar_url ?? null} name={req.profiles?.full_name ?? null} />
                       <p className="text-sm leading-snug flex-1" style={{ color: '#0F172A' }}>
@@ -305,7 +306,8 @@ export default function NotificationsPage({ userId, onBack, onOpenChat }: Props)
                 const creatorName = alert.moments?.profiles?.full_name ?? 'The organiser'
                 const title       = alert.moments?.title ?? 'a moment'
                 return (
-                  <div key={alert.id} className="user-card p-5">
+                  <div key={alert.id} className="user-card p-5"
+                    style={{ borderRadius: '1.5rem', boxShadow: '0 2px 4px rgba(15,23,42,0.04), 0 8px 24px rgba(15,23,42,0.10)' }}>
                     <div className="flex items-start gap-3 mb-4">
                       <Avatar
                         url={alert.moments?.profiles?.avatar_url ?? null}

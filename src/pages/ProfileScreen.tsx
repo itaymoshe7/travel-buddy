@@ -78,8 +78,8 @@ function socialLabel(url: string | null) {
 
 function StatCard({ value, label }: { value: string | number; label: string }) {
   return (
-    <div className="flex-1 flex flex-col items-center gap-1 rounded-2xl py-4 px-2"
-      style={{ background: 'white', boxShadow: '0 4px 16px rgba(15,23,42,0.08), 0 1px 4px rgba(15,23,42,0.04)' }}>
+    <div className="flex-1 flex flex-col items-center gap-1 rounded-3xl py-4 px-2"
+      style={{ background: 'white', boxShadow: '0 2px 4px rgba(15,23,42,0.04), 0 8px 24px rgba(15,23,42,0.10), 0 24px 48px rgba(15,23,42,0.05)' }}>
       <span className="text-2xl tracking-tight" style={{ color: '#0F172A', fontWeight: 800 }}>
         {value}
       </span>
@@ -94,8 +94,8 @@ function StatCard({ value, label }: { value: string | number; label: string }) {
 
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl p-5"
-      style={{ background: 'white', boxShadow: '0 4px 16px rgba(15,23,42,0.07), 0 1px 4px rgba(15,23,42,0.04)' }}>
+    <div className="rounded-3xl p-5"
+      style={{ background: 'white', boxShadow: '0 2px 4px rgba(15,23,42,0.04), 0 8px 24px rgba(15,23,42,0.10), 0 24px 48px rgba(15,23,42,0.05)' }}>
       <p className="text-[11px] font-semibold uppercase tracking-widest mb-3" style={{ color: '#64748B' }}>
         {label}
       </p>
@@ -200,7 +200,7 @@ export default function ProfileScreen({ userId, onLogOut }: Props) {
   // ── Loading ────────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#F8FAFC' }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'transparent' }}>
         <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
           style={{ borderColor: '#1D4ED8', borderTopColor: 'transparent' }} />
       </div>
@@ -210,11 +210,11 @@ export default function ProfileScreen({ userId, onLogOut }: Props) {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen pb-28" style={{ background: '#F8FAFC' }}>
+    <div className="min-h-screen pb-28" style={{ background: 'transparent' }}>
 
       {/* ── Top bar ──────────────────────────────────────────────────────── */}
       <div className="sticky top-0 z-10 px-5 pt-5 pb-3"
-        style={{ background: 'rgba(248,250,252,0.92)', backdropFilter: 'blur(12px)' }}>
+        style={{ background: 'rgba(240,253,252,0.92)', backdropFilter: 'blur(12px)' }}>
         <p className="text-[11px] font-semibold uppercase tracking-widest mb-1" style={{ color: '#94A3B8' }}>
           My Account
         </p>
@@ -231,7 +231,7 @@ export default function ProfileScreen({ userId, onLogOut }: Props) {
           {/* Avatar with glowing ring */}
           <div className="relative">
             <div className="absolute inset-0 rounded-full"
-              style={{ boxShadow: '0 0 0 3px #1D4ED8, 0 0 20px rgba(29,78,216,0.28)' }} />
+              style={{ boxShadow: '0 0 0 3px #0D9488, 0 0 0 6px rgba(13,148,136,0.15), 0 0 24px rgba(13,148,136,0.35)' }} />
             {profile.avatar_url ? (
               <img src={profile.avatar_url} alt="avatar"
                 className="w-24 h-24 rounded-full object-cover relative z-10"

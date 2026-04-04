@@ -185,7 +185,7 @@ export default function MomentDetail({ momentId, userId, onBack, onOpenChat, onV
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#F8FAFC' }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'transparent' }}>
         <div className="w-8 h-8 rounded-full border-2 animate-spin"
           style={{ borderColor: '#1D4ED8', borderTopColor: 'transparent' }} />
       </div>
@@ -194,7 +194,7 @@ export default function MomentDetail({ momentId, userId, onBack, onOpenChat, onV
 
   if (!moment) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#F8FAFC' }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'transparent' }}>
         <div className="text-center">
           <p className="text-sm mb-3" style={{ color: '#64748B' }}>Moment not found.</p>
           <button type="button" onClick={onBack} className="text-sm font-semibold" style={{ color: '#1D4ED8' }}>← Back</button>
@@ -240,11 +240,11 @@ export default function MomentDetail({ momentId, userId, onBack, onOpenChat, onV
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen pb-10" style={{ background: '#F8FAFC' }}>
+    <div className="min-h-screen pb-10" style={{ background: 'transparent' }}>
 
       {/* Header */}
       <div className="sticky top-0 z-10 px-5 pt-5 pb-3"
-        style={{ background: 'rgba(248,250,252,0.92)', backdropFilter: 'blur(12px)' }}>
+        style={{ background: 'rgba(240,253,252,0.92)', backdropFilter: 'blur(12px)' }}>
         <div className="flex items-center justify-between mb-1">
           <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: '#94A3B8' }}>
             Moment Details
@@ -285,8 +285,8 @@ export default function MomentDetail({ momentId, userId, onBack, onOpenChat, onV
       <div className="max-w-lg mx-auto px-4 pt-4 space-y-4">
 
         {/* ── Core info card ───────────────────────────────────────────────── */}
-        <div className="rounded-2xl p-5"
-          style={{ background: 'white', boxShadow: '0 2px 12px rgba(15,23,42,0.07)', border: '1px solid rgba(226,232,240,0.7)' }}>
+        <div className="rounded-3xl p-5"
+          style={{ background: 'white', boxShadow: '0 2px 4px rgba(15,23,42,0.04), 0 8px 24px rgba(15,23,42,0.10), 0 24px 48px rgba(15,23,42,0.05)', border: '1px solid rgba(226,232,240,0.7)' }}>
 
           {/* Activity + region badges */}
           <div className="flex flex-wrap gap-2 mb-4">
@@ -379,8 +379,8 @@ export default function MomentDetail({ momentId, userId, onBack, onOpenChat, onV
         </div>
 
         {/* ── Participants ────────────────────────────────────────────────── */}
-        <div className="rounded-2xl p-5"
-          style={{ background: 'white', boxShadow: '0 2px 12px rgba(15,23,42,0.07)', border: '1px solid rgba(226,232,240,0.7)' }}>
+        <div className="rounded-3xl p-5"
+          style={{ background: 'white', boxShadow: '0 2px 4px rgba(15,23,42,0.04), 0 8px 24px rgba(15,23,42,0.10), 0 24px 48px rgba(15,23,42,0.05)', border: '1px solid rgba(226,232,240,0.7)' }}>
           <p className="text-[11px] font-semibold uppercase tracking-widest mb-3" style={{ color: '#64748B' }}>
             Who's going · {accepted} / {moment.total_spots}
           </p>

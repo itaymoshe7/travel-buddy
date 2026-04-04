@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 const REGIONS = [
@@ -70,6 +70,25 @@ export default function CreateMoment({ userId, onComplete, onBack }: Props) {
   const [errors, setErrors] = useState<FormErrors>({})
   const [loading, setLoading] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
+  const [imageFile,       setImageFile]       = useState<File | null>(null)
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null)
+  const [uploadError,     setUploadError]     = useState<string | null>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
+
+  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null
+    if (!file) return
+    setImageFile(file)
+    setImagePreviewUrl(URL.createObjectURL(file))
+    setUploadError(null)
+  }
+
+  function removeImage() {
+    setImageFile(null)
+    if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl)
+    setImagePreviewUrl(null)
+    if (imageInputRef.current) imageInputRef.current.value = ''
+  }
 
   function set<K extends keyof FormState>(field: K, value: FormState[K]) {
     setForm(prev => ({ ...prev, [field]: value }))
@@ -95,6 +114,23 @@ export default function CreateMoment({ userId, onComplete, onBack }: Props) {
     if (!validate()) return
     setLoading(true)
     setServerError(null)
+    setUploadError(null)
+
+    let imageUrl: string | null = null
+    if (imageFile) {
+      const ext  = imageFile.name.split('.').pop() ?? 'jpg'
+      const path = `${userId}/${Date.now()}.${ext}`
+      const { error: uploadErr } = await supabase.storage
+        .from('moment-images')
+        .upload(path, imageFile, { upsert: false })
+      if (uploadErr) {
+        setUploadError('Image upload failed: ' + uploadErr.message)
+        setLoading(false)
+        return
+      }
+      const { data: urlData } = supabase.storage.from('moment-images').getPublicUrl(path)
+      imageUrl = urlData.publicUrl
+    }
 
     const { error } = await supabase.from('moments').insert({
       creator_id:    userId,
@@ -106,6 +142,7 @@ export default function CreateMoment({ userId, onComplete, onBack }: Props) {
       activity_type: form.activityType,
       total_spots:   form.spots,
       description:   form.description.trim() || null,
+      image_url:     imageUrl,
     })
 
     setLoading(false)
@@ -326,6 +363,52 @@ export default function CreateMoment({ userId, onComplete, onBack }: Props) {
               rows={4}
               className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:border-primary focus:bg-white text-sm text-text-main placeholder:text-slate-400 outline-none transition-colors resize-none"
             />
+          </div>
+
+          {/* Cover Image */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+              Cover Photo <span className="normal-case font-normal">(optional)</span>
+            </label>
+
+            {imagePreviewUrl ? (
+              <div className="relative rounded-xl overflow-hidden" style={{ height: 160 }}>
+                <img src={imagePreviewUrl} alt="Preview" className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  className="absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center focus:outline-none"
+                  style={{ background: 'rgba(0,0,0,0.55)', color: 'white' }}
+                  aria-label="Remove image"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => imageInputRef.current?.click()}
+                className="w-full rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-2 py-8 transition-colors focus:outline-none hover:border-primary hover:bg-blue-50/30"
+                style={{ borderColor: '#CBD5E1', background: '#F8FAFC' }}
+              >
+                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} style={{ color: '#94A3B8' }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M13.5 12h.008v.008H13.5V12zm-6-3a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-sm font-medium" style={{ color: '#64748B' }}>Tap to add a cover photo</span>
+                <span className="text-xs" style={{ color: '#94A3B8' }}>JPG, PNG, WebP</span>
+              </button>
+            )}
+
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleImageChange}
+            />
+            {uploadError && <p className="text-xs text-red-500 mt-1">{uploadError}</p>}
           </div>
         </div>
 

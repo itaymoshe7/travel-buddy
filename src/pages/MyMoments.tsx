@@ -10,6 +10,7 @@ interface MomentCard {
   start_date:    string | null
   end_date:      string | null
   activity_type: string
+  image_url?:    string | null
   creator_id?:   string       // only set for joined moments
   creator_name?: string | null // loaded alongside creator_id for DM name fallback
   status?:       string       // 'pending' | 'accepted' — only set for joined moments
@@ -94,6 +95,10 @@ function MomentItem({
   const isApproved = moment.status === 'accepted'
   const isPending  = moment.status === 'pending'
   const showChat   = onOpenChat !== undefined && (isApproved || isPending)
+  const hasImage   = !!moment.image_url
+  const txt = hasImage ? '#FFFFFF'                : '#0F172A'
+  const sub = hasImage ? 'rgba(255,255,255,0.85)' : '#64748B'
+  const mut = hasImage ? 'rgba(255,255,255,0.65)' : '#94A3B8'
 
   async function handleChat() {
     if (!onOpenChat || chatting) return
@@ -120,31 +125,36 @@ function MomentItem({
   }
 
   return (
-    <div className="rounded-2xl overflow-hidden"
+    <div className="rounded-3xl overflow-hidden"
       style={{
-        background: isApproved
+        background:         hasImage ? undefined : isApproved
           ? 'linear-gradient(145deg, rgba(220,252,231,0.6) 0%, rgba(239,246,255,0.9) 100%)'
           : 'linear-gradient(145deg, rgba(248,250,252,0.9) 0%, rgba(239,246,255,0.9) 100%)',
-        border:    `1px solid ${isApproved ? 'rgba(134,239,172,0.5)' : 'rgba(226,232,240,0.7)'}`,
-        boxShadow: '0 2px 10px rgba(15,23,42,0.06)',
+        backgroundImage:    hasImage
+          ? `linear-gradient(to bottom, rgba(0,0,0,0.20) 0%, rgba(0,0,0,0.65) 100%), url(${moment.image_url})`
+          : undefined,
+        backgroundSize:     hasImage ? 'cover'  : undefined,
+        backgroundPosition: hasImage ? 'center' : undefined,
+        border:    hasImage ? 'none' : `1px solid ${isApproved ? 'rgba(134,239,172,0.5)' : 'rgba(226,232,240,0.7)'}`,
+        boxShadow: '0 2px 4px rgba(15,23,42,0.04), 0 8px 24px rgba(15,23,42,0.10)',
       }}>
       <div className="p-4 cursor-pointer" onClick={onSelect}>
         {/* Top row: icon + info + chat button */}
         <div className="flex items-center gap-3">
           {/* Activity icon bubble */}
           <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 text-xl"
-            style={{ background: 'white', boxShadow: '0 1px 4px rgba(15,23,42,0.08)' }}>
+            style={{ background: hasImage ? 'rgba(255,255,255,0.18)' : 'white', boxShadow: '0 1px 4px rgba(15,23,42,0.08)' }}>
             {ACTIVITY_EMOJI[moment.activity_type] ?? '📍'}
           </div>
 
           {/* Info */}
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold truncate" style={{ color: '#0F172A' }}>
+            <p className="text-sm font-bold truncate" style={{ color: txt }}>
               {moment.title}
             </p>
-            <p className="text-xs mt-0.5 truncate" style={{ color: '#64748B' }}>
+            <p className="text-xs mt-0.5 truncate" style={{ color: sub }}>
               📍 {moment.destination}
-              {dateStr && <span style={{ color: '#94A3B8' }}> · {dateStr}</span>}
+              {dateStr && <span style={{ color: mut }}> · {dateStr}</span>}
             </p>
           </div>
 
@@ -156,7 +166,9 @@ function MomentItem({
                 onClick={e => { e.stopPropagation(); handleChat() }}
                 disabled={chatting}
                 className="px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider focus:outline-none transition-colors"
-                style={{ background: 'rgba(29,78,216,0.10)', color: '#1D4ED8', cursor: 'pointer' }}
+                style={hasImage
+                  ? { background: 'rgba(255,255,255,0.20)', color: 'white', cursor: 'pointer' }
+                  : { background: 'rgba(29,78,216,0.10)', color: '#1D4ED8', cursor: 'pointer' }}
               >
                 {chatting ? '…' : 'Chat'}
               </button>
@@ -166,7 +178,9 @@ function MomentItem({
                 type="button"
                 onClick={e => { e.stopPropagation(); onDelete() }}
                 className="w-7 h-7 rounded-lg flex items-center justify-center focus:outline-none transition-colors"
-                style={{ background: 'rgba(239,68,68,0.08)', color: '#EF4444' }}
+                style={hasImage
+                  ? { background: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.85)' }
+                  : { background: 'rgba(239,68,68,0.08)', color: '#EF4444' }}
                 aria-label="Delete moment"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -176,7 +190,7 @@ function MomentItem({
             )}
             {!showChat && !onDelete && (
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                strokeWidth={2} style={{ color: '#CBD5E1' }}>
+                strokeWidth={2} style={{ color: hasImage ? 'rgba(255,255,255,0.5)' : '#CBD5E1' }}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
             )}
@@ -210,7 +224,7 @@ export default function MyMoments({ userId, onOpenChat, onSelectMoment }: Props)
       setLoadingPosts(true)
       const { data } = await supabase
         .from('moments')
-        .select('id, title, destination, start_date, end_date, activity_type')
+        .select('id, title, destination, start_date, end_date, activity_type, image_url')
         .eq('creator_id', userId)
         .order('created_at', { ascending: false })
       setMyPosts((data as MomentCard[]) ?? [])
@@ -244,7 +258,7 @@ export default function MyMoments({ userId, onOpenChat, onSelectMoment }: Props)
 
       const { data } = await supabase
         .from('moments')
-        .select('id, title, destination, start_date, end_date, activity_type, creator_id, profiles!creator_id(full_name)')
+        .select('id, title, destination, start_date, end_date, activity_type, image_url, creator_id, profiles!creator_id(full_name)')
         .in('id', ids)
 
       // Preserve the request ordering (most recent first)
@@ -294,11 +308,11 @@ export default function MyMoments({ userId, onOpenChat, onSelectMoment }: Props)
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen pb-28" style={{ background: '#F8FAFC' }}>
+    <div className="min-h-screen pb-28" style={{ background: 'transparent' }}>
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="sticky top-0 z-10 px-5 pt-5 pb-0"
-        style={{ background: 'rgba(248,250,252,0.92)', backdropFilter: 'blur(12px)' }}>
+        style={{ background: 'rgba(240,253,252,0.92)', backdropFilter: 'blur(12px)' }}>
 
         <p className="text-[11px] font-semibold uppercase tracking-widest mb-1"
           style={{ color: '#94A3B8' }}>
