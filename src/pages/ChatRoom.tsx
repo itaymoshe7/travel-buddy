@@ -195,11 +195,17 @@ export default function ChatRoom({ chatId, userId, otherUserName, onBack }: Prop
           const isMine = msg.sender_id === userId
           return (
             <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[72%] px-5 py-3 rounded-3xl text-sm leading-relaxed ${isMine ? 'rounded-br-md' : 'rounded-bl-md'}`}
-                style={isMine ? { background: 'linear-gradient(135deg, #1D4ED8 0%, #0891B2 100%)', color: 'white' } : { background: '#F1F5F9', color: '#0F172A' }}
+              <div
+                className={`max-w-[72%] px-5 py-3 rounded-3xl text-sm leading-relaxed ${isMine ? 'rounded-br-md' : 'rounded-bl-md'}`}
+                style={isMine
+                  ? { background: 'linear-gradient(135deg, #1D4ED8 0%, #0891B2 100%)', color: '#FFFFFF' }
+                  : { background: '#F1F5F9', color: '#0F172A' }}
               >
-                <p>{msg.content}</p>
-                <p className={`text-[10px] mt-1.5 ${isMine ? 'text-white opacity-75' : 'text-slate-400'} text-right`}>
+                <p style={isMine ? { color: '#FFFFFF' } : undefined}>{msg.content}</p>
+                <p
+                  className="text-[10px] mt-1.5 text-right"
+                  style={isMine ? { color: '#E0E0E0' } : { color: '#94A3B8' }}
+                >
                   {formatTime(msg.created_at)}
                 </p>
               </div>
