@@ -37,6 +37,68 @@ const FEATURED_CITIES: Record<RegionId, string[]> = {
   'asia':                  ['Tokyo','Bangkok','Bali','Singapore','Seoul','Hong Kong','Dubai','Hanoi','Kuala Lumpur','Chiang Mai','Kyoto','Osaka','Istanbul','Mumbai','New Delhi'],
 }
 
+// ─── Internal fallback city lists (used when library returns nothing) ─────────
+
+const FALLBACK_CITIES: Record<RegionId, string[]> = {
+  'south-america': [
+    'Buenos Aires','Río de Janeiro','São Paulo','Bogotá','Lima','Santiago','Cartagena','Medellín','Cusco','Montevideo',
+    'Quito','La Paz','Fortaleza','Valparaíso','Florianópolis','Recife','Salvador','Manaus','Asunción','Caracas',
+    'Guayaquil','Rosario','Córdoba','Mendoza','Porto Alegre','Campinas','Belo Horizonte','Barranquilla','Cali','Pereira',
+    'Santa Marta','Cartagena de Indias','Viña del Mar','Concepción','Temuco','Arequipa','Trujillo','Iquitos',
+    'Punta del Este','Colonia del Sacramento','Iguazú','Patagonia','Bariloche','El Calafate','Ushuaia',
+    'Machu Picchu','Cusco','Puno','Nazca','Huacachina',
+  ],
+  'central-north-america': [
+    'New York','Los Angeles','Miami','Mexico City','Cancún','Tulum','Chicago','Toronto','Las Vegas','San Francisco',
+    'New Orleans','Vancouver','Nashville','Montréal','Havana','Seattle','Boston','Washington DC','Austin','Denver',
+    'Portland','San Diego','Atlanta','Dallas','Houston','Phoenix','Minneapolis','Detroit','Philadelphia','Orlando',
+    'Tampa','Fort Lauderdale','Key West','Honolulu','Maui','Anchorage','Quebec City','Calgary','Ottawa','Winnipeg',
+    'Guadalajara','Monterrey','Oaxaca','Mérida','San Cristóbal de las Casas','Puerto Vallarta','Los Cabos',
+    'Guatemala City','Antigua','Belize City','San Pedro Sula','Tegucigalpa','San José','Panama City','San Salvador',
+    'Managua','Kingston','Santo Domingo','San Juan','Nassau','Bridgetown','Port of Spain','Havana','Trinidad',
+  ],
+  'europe': [
+    'Paris','Barcelona','Amsterdam','Rome','Lisbon','Prague','Berlin','Athens','Budapest','Dubrovnik',
+    'London','Madrid','Vienna','Copenhagen','Zürich','Milan','Venice','Florence','Naples','Palermo',
+    'Porto','Seville','Granada','Valencia','Málaga','Brussels','Ghent','Bruges','Rotterdam','The Hague',
+    'Munich','Hamburg','Frankfurt','Cologne','Dresden','Leipzig','Stockholm','Gothenburg','Malmö','Oslo','Bergen',
+    'Helsinki','Tallinn','Riga','Vilnius','Warsaw','Kraków','Gdańsk','Wrocław','Łódź','Poznań',
+    'Budapest','Debrecen','Bratislava','Brno','Bucharest','Cluj-Napoca','Zagreb','Split','Dubrovnik','Ljubljana',
+    'Belgrade','Sarajevo','Podgorica','Skopje','Tirana','Sofia','Thessaloniki','Santorini','Mykonos','Crete',
+    'Reykjavik','Dublin','Edinburgh','Glasgow','Cardiff','Nice','Lyon','Marseille','Bordeaux','Strasbourg',
+    'Geneva','Bern','Basel','Innsbruck','Salzburg','Graz','Luxembourg City','Monaco','Valletta','Nicosia',
+    'Kyiv','Lviv','Odessa','Minsk','Chișinău','Moscow','Saint Petersburg',
+  ],
+  'australia': [
+    'Sydney','Melbourne','Brisbane','Perth','Gold Coast','Auckland','Queenstown','Cairns','Byron Bay','Darwin',
+    'Adelaide','Christchurch','Wellington','Nadi','Rotorua','Hobart','Canberra','Wollongong','Newcastle','Sunshine Coast',
+    'Townsville','Mackay','Rockhampton','Toowoomba','Ballarat','Bendigo','Launceston','Dunedin','Hamilton','Tauranga',
+    'Palmerston North','Nelson','Invercargill','Suva','Lautoka','Port Vila','Honiara','Apia','Nukualofa',
+    'Port Moresby','Lae','Mount Hagen','Madang',
+  ],
+  'africa': [
+    'Marrakech','Cape Town','Nairobi','Cairo','Zanzibar','Addis Ababa','Lagos','Casablanca','Accra','Dakar',
+    'Johannesburg','Kigali','Dar es Salaam','Sharm El-Sheikh','Luxor','Fez','Tangier','Essaouira','Hurghada',
+    'Aswan','Alexandria','Tunis','Sfax','Sousse','Algiers','Oran','Tripoli','Benghazi','Khartoum',
+    'Kampala','Mombasa','Arusha','Kilimanjaro','Pemba','Maputo','Beira','Harare','Bulawayo','Lusaka',
+    'Livingstone','Victoria Falls','Gaborone','Windhoek','Swakopmund','Durban','Port Elizabeth','Pretoria',
+    'Abidjan','Yamoussoukro','Kumasi','Ouagadougou','Bamako','Conakry','Freetown','Monrovia','Abuja','Kano',
+    'Douala','Yaoundé','Libreville','Kinshasa','Brazzaville','Luanda','Antananarivo','Nosy Be','Port Louis',
+    'Mahé','Djibouti City','Mogadishu','Asmara','Kigali',
+  ],
+  'asia': [
+    'Tokyo','Bangkok','Bali','Singapore','Seoul','Hong Kong','Dubai','Hanoi','Kuala Lumpur','Chiang Mai',
+    'Kyoto','Osaka','Istanbul','Mumbai','New Delhi','Beijing','Shanghai','Guangzhou','Shenzhen','Chengdu',
+    'Xi\'an','Hangzhou','Nanjing','Wuhan','Chongqing','Taipei','Kaohsiung','Busan','Jeju','Incheon',
+    'Ho Chi Minh City','Da Nang','Hội An','Nha Trang','Phú Quốc','Jakarta','Yogyakarta','Surabaya','Medan','Lombok',
+    'Komodo','Flores','Penang','Langkawi','Kota Kinabalu','Johor Bahru','Manila','Cebu','Palawan','Boracay','Davao',
+    'Phnom Penh','Siem Reap','Vientiane','Luang Prabang','Yangon','Mandalay','Colombo','Kandy','Galle','Kathmandu',
+    'Pokhara','Dhaka','Cox\'s Bazar','Karachi','Lahore','Islamabad','Abu Dhabi','Doha','Riyadh','Jeddah','Muscat',
+    'Kuwait City','Manama','Amman','Beirut','Tel Aviv','Jerusalem','Tbilisi','Yerevan','Baku','Tashkent',
+    'Almaty','Ulaanbaatar','Macau','Hainan','Phuket','Pattaya','Hua Hin','Koh Samui','Koh Phi Phi',
+  ],
+}
+
 // ─── City helpers ─────────────────────────────────────────────────────────────
 
 // Filter out administrative region names that aren't practical city searches
@@ -60,10 +122,17 @@ function buildRegionCities(regionId: RegionId): string[] {
   // Always include curated featured cities
   for (const c of FEATURED_CITIES[regionId]) set.add(c)
   // Add library cities with quality filter
+  let libraryCount = 0
   for (const code of REGION_COUNTRY_CODES[regionId]) {
-    for (const city of City.getCitiesOfCountry(code) ?? []) {
-      if (isUsableCityName(city.name)) set.add(city.name)
+    const libCities = City.getCitiesOfCountry(code) ?? []
+    for (const city of libCities) {
+      if (isUsableCityName(city.name)) { set.add(city.name); libraryCount++ }
     }
+  }
+  // If library returned nothing, merge in the internal fallback list
+  if (libraryCount === 0) {
+    console.warn('country-state-city returned 0 cities for region', regionId, '— using internal fallback')
+    for (const c of FALLBACK_CITIES[regionId]) set.add(c)
   }
   const sorted = Array.from(set).sort((a, b) => a.localeCompare(b))
   regionCityCache.set(regionId, sorted)
@@ -103,6 +172,7 @@ function CitySearch({
     setComputing(true)
     const tid = setTimeout(() => {
       const cities = buildRegionCities(regionId)
+      console.log('Cities loaded:', cities.length, 'for region:', regionId)
       setAllCities(cities)
       setComputing(false)
     }, 0)
@@ -129,12 +199,13 @@ function CitySearch({
     if (!regionId) return []
     // Empty query → show featured cities instantly (no wait for debounce)
     if (!debouncedQuery) return FEATURED_CITIES[regionId]
-    const src = allCities.length ? allCities : FEATURED_CITIES[regionId]
+    // Use full library list, or fallback to internal list if still computing / library empty
+    const src = allCities.length ? allCities : FALLBACK_CITIES[regionId]
     // Cities starting with the query rank above cities that merely contain it
     const q          = debouncedQuery
     const startsWith = src.filter(c => c.toLowerCase().startsWith(q))
     const contains   = src.filter(c => !c.toLowerCase().startsWith(q) && c.toLowerCase().includes(q))
-    return [...startsWith, ...contains].slice(0, 25)
+    return [...startsWith, ...contains].slice(0, 100)
   }, [debouncedQuery, regionId, allCities])
 
   function select(city: string) {
