@@ -63,12 +63,12 @@ const ACTIVITY_FILTERS: { id: ActivityFilter; label: string }[] = [
 
 // Region filters — slugs must match DB CHECK constraint
 const REGION_META: Record<string, { label: string; emoji: string }> = {
-  'south-america':   { label: 'South America', emoji: '🌎' },
-  'far-east':        { label: 'Far East',       emoji: '🏯' },
-  'southeast-asia':  { label: 'SE Asia',        emoji: '🌏' },
-  'europe':          { label: 'Europe',          emoji: '🏰' },
-  'africa':          { label: 'Africa',          emoji: '🌍' },
-  'central-america': { label: 'Central Am.',    emoji: '🌺' },
+  'south-america':         { label: 'South America',         emoji: '🌎' },
+  'central-north-america': { label: 'Central & North America', emoji: '🗽' },
+  'europe':                { label: 'Europe',                 emoji: '🏰' },
+  'australia':             { label: 'Australia',              emoji: '🐨' },
+  'africa':                { label: 'Africa',                 emoji: '🦁' },
+  'asia':                  { label: 'Asia',                   emoji: '⛩️' },
 }
 const REGION_FILTER_IDS = Object.keys(REGION_META)
 

@@ -1,25 +1,81 @@
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
+// ─── Regions ──────────────────────────────────────────────────────────────────
+
 const REGIONS = [
-  { id: 'south-america',   label: 'South America', emoji: '🌎' },
-  { id: 'far-east',        label: 'Far East',       emoji: '🏯' },
-  { id: 'southeast-asia',  label: 'SE Asia',        emoji: '🌏' },
-  { id: 'europe',          label: 'Europe',          emoji: '🏰' },
-  { id: 'africa',          label: 'Africa',          emoji: '🌍' },
-  { id: 'central-america', label: 'Central Am.',    emoji: '🌺' },
+  { id: 'south-america',         label: 'South America',         emoji: '🌎' },
+  { id: 'central-north-america', label: 'Central & North America', emoji: '🗽' },
+  { id: 'europe',                label: 'Europe',                 emoji: '🏰' },
+  { id: 'australia',             label: 'Australia',              emoji: '🐨' },
+  { id: 'africa',                label: 'Africa',                 emoji: '🦁' },
+  { id: 'asia',                  label: 'Asia',                   emoji: '⛩️' },
 ] as const
 
 type RegionId = typeof REGIONS[number]['id']
 
+// ─── Cities ───────────────────────────────────────────────────────────────────
+// ~30–40 major cities per region, shown as suggestions when that region is active.
+// Typing searches the full ALL_CITIES list (all regions combined).
+
 const REGION_CITIES: Record<RegionId, string[]> = {
-  'south-america':   ['Buenos Aires', 'Rio de Janeiro', 'Cusco', 'Cartagena', 'Medellín', 'Lima', 'Santiago', 'São Paulo', 'Bogotá', 'Montevideo'],
-  'far-east':        ['Tokyo', 'Kyoto', 'Seoul', 'Shanghai', 'Beijing', 'Hong Kong', 'Osaka', 'Taipei', 'Chengdu', 'Busan'],
-  'southeast-asia':  ['Bangkok', 'Bali', 'Hanoi', 'Ho Chi Minh City', 'Singapore', 'Kuala Lumpur', 'Chiang Mai', 'Phuket', 'Phnom Penh', 'Yangon'],
-  'europe':          ['Paris', 'Barcelona', 'Amsterdam', 'Rome', 'Lisbon', 'Prague', 'Berlin', 'Athens', 'Budapest', 'Dubrovnik'],
-  'africa':          ['Marrakech', 'Cape Town', 'Nairobi', 'Cairo', 'Zanzibar', 'Addis Ababa', 'Lagos', 'Casablanca', 'Accra', 'Dakar'],
-  'central-america': ['Mexico City', 'Cancún', 'Tulum', 'Guatemala City', 'San José', 'Havana', 'Panama City', 'Antigua', 'Oaxaca', 'Playa del Carmen'],
+  'south-america': [
+    'Buenos Aires', 'Rio de Janeiro', 'São Paulo', 'Bogotá', 'Lima', 'Santiago',
+    'Cartagena', 'Medellín', 'Cusco', 'Montevideo', 'Quito', 'La Paz', 'Asunción',
+    'Guayaquil', 'Cali', 'Florianópolis', 'Recife', 'Salvador', 'Belo Horizonte',
+    'Manaus', 'Bariloche', 'Valparaíso', 'Fortaleza', 'Santa Marta', 'Barranquilla',
+    'Iguazú', 'Puerto Madryn', 'Rosario', 'Córdoba', 'Punta Arenas',
+  ],
+  'central-north-america': [
+    'New York', 'Los Angeles', 'Miami', 'Chicago', 'Mexico City', 'Cancún', 'Tulum',
+    'Las Vegas', 'San Francisco', 'Toronto', 'Vancouver', 'Montréal', 'New Orleans',
+    'Nashville', 'Havana', 'San José', 'Guatemala City', 'Panama City', 'Antigua',
+    'Oaxaca', 'Playa del Carmen', 'Cabo San Lucas', 'Puerto Vallarta', 'Mérida',
+    'Kingston', 'San Juan', 'Nassau', 'Seattle', 'Austin', 'Denver',
+    'Guadalajara', 'Monterrey', 'Tegucigalpa', 'Managua', 'San Salvador',
+  ],
+  'europe': [
+    'Paris', 'Barcelona', 'Amsterdam', 'Rome', 'Lisbon', 'Prague', 'Berlin',
+    'Athens', 'Budapest', 'Dubrovnik', 'London', 'Madrid', 'Vienna', 'Brussels',
+    'Copenhagen', 'Stockholm', 'Oslo', 'Zürich', 'Milan', 'Venice', 'Florence',
+    'Porto', 'Seville', 'Munich', 'Warsaw', 'Kraków', 'Edinburgh', 'Dublin',
+    'Reykjavík', 'Tallinn', 'Riga', 'Split', 'Santorini', 'Mykonos', 'Sofia',
+    'Bucharest', 'Sarajevo', 'Kotor', 'Mostar', 'Ljubljana', 'Bratislava',
+    'Helsinki', 'Geneva', 'Naples', 'Palermo', 'Valencia', 'Bilbao',
+  ],
+  'australia': [
+    'Sydney', 'Melbourne', 'Brisbane', 'Perth', 'Adelaide', 'Gold Coast', 'Cairns',
+    'Darwin', 'Hobart', 'Canberra', 'Byron Bay', 'Alice Springs', 'Broome',
+    'Whitsundays', 'Margaret River', 'Noosa', 'Airlie Beach', 'Port Douglas',
+    'Auckland', 'Queenstown', 'Wellington', 'Christchurch', 'Rotorua', 'Taupo',
+    'Nadi', 'Suva', 'Apia', 'Rarotonga', 'Noumea', 'Port Vila',
+  ],
+  'africa': [
+    'Marrakech', 'Cape Town', 'Nairobi', 'Cairo', 'Zanzibar', 'Addis Ababa',
+    'Lagos', 'Casablanca', 'Accra', 'Dakar', 'Johannesburg', 'Durban',
+    'Kampala', 'Dar es Salaam', 'Kigali', 'Maputo', 'Lusaka', 'Windhoek',
+    'Tunis', 'Abidjan', 'Luanda', 'Port Louis', 'Victoria', 'Sharm El-Sheikh',
+    'Hurghada', 'Luxor', 'Fez', 'Tangier', 'Essaouira', 'Agadir',
+    'Lome', 'Bamako', 'Libreville', 'Malindi', 'Mombasa', 'Arusha',
+  ],
+  'asia': [
+    'Tokyo', 'Kyoto', 'Seoul', 'Shanghai', 'Beijing', 'Hong Kong', 'Osaka',
+    'Taipei', 'Chengdu', 'Busan', 'Bangkok', 'Bali', 'Hanoi', 'Ho Chi Minh City',
+    'Singapore', 'Kuala Lumpur', 'Chiang Mai', 'Phuket', 'Phnom Penh', 'Yangon',
+    'Jakarta', 'Manila', 'Mumbai', 'New Delhi', 'Bangalore', 'Goa', 'Jaipur',
+    'Agra', 'Kolkata', 'Chennai', 'Dubai', 'Abu Dhabi', 'Doha', 'Istanbul',
+    'Tbilisi', 'Kathmandu', 'Colombo', 'Malé', 'Siem Reap', 'Luang Prabang',
+    'Da Nang', 'Nha Trang', 'Ulaanbaatar', 'Almaty', 'Tashkent', 'Amman',
+    'Beirut', 'Muscat', 'Riyadh', 'Tel Aviv', 'Yerevan', 'Baku',
+  ],
 }
+
+// Flat sorted list of every city for cross-region search
+const ALL_CITIES: string[] = Array.from(new Set(Object.values(REGION_CITIES).flat())).sort(
+  (a, b) => a.localeCompare(b),
+)
+
+// ─── Activity Types ───────────────────────────────────────────────────────────
 
 const ACTIVITY_TYPES = [
   { id: 'landing',   label: 'Landing',   emoji: '✈️' },
@@ -30,49 +86,181 @@ const ACTIVITY_TYPES = [
 
 type ActivityType = typeof ACTIVITY_TYPES[number]['id']
 
+// ─── City Search Combobox ─────────────────────────────────────────────────────
+
+function CitySearch({
+  regionId,
+  value,
+  onChange,
+  error,
+}: {
+  regionId: RegionId | null
+  value: string
+  onChange: (v: string) => void
+  error?: string
+}) {
+  const [open, setOpen] = useState(false)
+  const [cursor, setCursor] = useState(-1)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const listRef  = useRef<HTMLUListElement>(null)
+
+  // Sync cursor reset when suggestions change
+  useEffect(() => { setCursor(-1) }, [value])
+
+  const suggestions = useMemo(() => {
+    if (!regionId) return []
+    const q        = value.trim().toLowerCase()
+    const regional = REGION_CITIES[regionId]
+    if (!q) return regional.slice(0, 15)
+    const regionHits = regional.filter(c => c.toLowerCase().includes(q))
+    const globalHits = ALL_CITIES.filter(c => !regional.includes(c) && c.toLowerCase().includes(q))
+    return [...regionHits, ...globalHits].slice(0, 25)
+  }, [value, regionId])
+
+  // Scroll highlighted item into view
+  useEffect(() => {
+    if (cursor < 0 || !listRef.current) return
+    const item = listRef.current.children[cursor] as HTMLElement
+    item?.scrollIntoView({ block: 'nearest' })
+  }, [cursor])
+
+  function select(city: string) {
+    onChange(city)
+    setOpen(false)
+    setCursor(-1)
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (!open) { if (e.key === 'ArrowDown') setOpen(true); return }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setCursor(c => Math.min(c + 1, suggestions.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setCursor(c => Math.max(c - 1, -1))
+    } else if (e.key === 'Enter' && cursor >= 0) {
+      e.preventDefault()
+      select(suggestions[cursor])
+    } else if (e.key === 'Escape') {
+      setOpen(false)
+    }
+  }
+
+  const isDisabled = !regionId
+
+  return (
+    <div className="relative">
+      <div className="relative">
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          disabled={isDisabled}
+          placeholder={isDisabled ? 'Select a region first' : 'Search or type a city…'}
+          autoComplete="off"
+          onChange={e => { onChange(e.target.value); setOpen(true) }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          onKeyDown={handleKeyDown}
+          className={`w-full px-4 py-2.5 pr-9 rounded-xl border text-sm outline-none transition-colors
+            ${error
+              ? 'border-red-400 bg-red-50 text-text-main'
+              : isDisabled
+                ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'
+                : 'border-slate-200 bg-slate-50 text-text-main focus:border-primary focus:bg-white'}`}
+        />
+        {/* Chevron / search icon */}
+        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2" style={{ color: '#94A3B8' }}>
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
+          </svg>
+        </span>
+      </div>
+
+      {open && suggestions.length > 0 && (
+        <ul
+          ref={listRef}
+          className="absolute left-0 right-0 rounded-xl overflow-y-auto z-40"
+          style={{
+            top: 'calc(100% + 4px)',
+            background: 'white',
+            boxShadow: '0 4px 6px rgba(15,23,42,0.06), 0 10px 32px rgba(15,23,42,0.12)',
+            border: '1px solid #E2E8F0',
+            maxHeight: 220,
+          }}
+        >
+          {suggestions.map((city, i) => (
+            <li key={city}>
+              <button
+                type="button"
+                onMouseDown={() => select(city)}
+                className="w-full px-4 py-2.5 text-left text-sm transition-colors focus:outline-none"
+                style={{
+                  background: i === cursor ? '#EFF6FF' : 'transparent',
+                  color:      i === cursor ? '#1D4ED8' : '#0F172A',
+                  fontWeight: i === cursor ? 600 : 400,
+                  borderBottom: i < suggestions.length - 1 ? '1px solid #F8FAFC' : 'none',
+                }}
+              >
+                {city}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+    </div>
+  )
+}
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 interface FormState {
-  title: string
-  destination: string
-  region: RegionId | null
-  startDate: string
-  endDate: string
+  title:        string
+  destination:  string
+  region:       RegionId | null
+  startDate:    string
+  endDate:      string
   activityType: ActivityType | null
-  spots: number
-  description: string
+  spots:        number
+  description:  string
 }
 
 interface FormErrors {
-  title?: string
-  destination?: string
-  region?: string
-  startDate?: string
-  endDate?: string
+  title?:        string
+  destination?:  string
+  region?:       string
+  startDate?:    string
+  endDate?:      string
   activityType?: string
 }
 
 interface Props {
-  userId: string
+  userId:     string
   onComplete: () => void
-  onBack: () => void
+  onBack:     () => void
 }
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function CreateMoment({ userId, onComplete, onBack }: Props) {
   const [form, setForm] = useState<FormState>({
-    title: '',
-    destination: '',
-    region: null,
-    startDate: '',
-    endDate: '',
+    title:        '',
+    destination:  '',
+    region:       null,
+    startDate:    '',
+    endDate:      '',
     activityType: null,
-    spots: 4,
-    description: '',
+    spots:        4,
+    description:  '',
   })
-  const [errors, setErrors] = useState<FormErrors>({})
-  const [loading, setLoading] = useState(false)
-  const [serverError, setServerError] = useState<string | null>(null)
-  const [imageFile,       setImageFile]       = useState<File | null>(null)
+  const [errors,        setErrors]        = useState<FormErrors>({})
+  const [loading,       setLoading]       = useState(false)
+  const [serverError,   setServerError]   = useState<string | null>(null)
+  const [imageFile,     setImageFile]     = useState<File | null>(null)
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null)
-  const [uploadError,     setUploadError]     = useState<string | null>(null)
+  const [uploadError,   setUploadError]   = useState<string | null>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
 
   function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -99,7 +287,7 @@ export default function CreateMoment({ userId, onComplete, onBack }: Props) {
   function validate(): boolean {
     const next: FormErrors = {}
     if (!form.title.trim())       next.title        = 'Title is required'
-    if (!form.destination.trim()) next.destination  = 'Destination is required'
+    if (!form.destination.trim()) next.destination  = 'City is required'
     if (!form.region)             next.region       = 'Please choose a region'
     if (!form.startDate)          next.startDate    = 'Start date is required'
     if (!form.endDate)            next.endDate      = 'End date is required'
@@ -146,12 +334,7 @@ export default function CreateMoment({ userId, onComplete, onBack }: Props) {
     })
 
     setLoading(false)
-
-    if (error) {
-      setServerError(error.message)
-      return
-    }
-
+    if (error) { setServerError(error.message); return }
     onComplete()
   }
 
@@ -196,7 +379,7 @@ export default function CreateMoment({ userId, onComplete, onBack }: Props) {
             {errors.title && <p className="text-xs text-red-500 mt-1">{errors.title}</p>}
           </div>
 
-          {/* Region — must come before City so the dropdown is populated */}
+          {/* Region — 2-column grid (3 per row × 2 rows) */}
           <div>
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
               Region
@@ -209,18 +392,20 @@ export default function CreateMoment({ userId, onComplete, onBack }: Props) {
                     key={r.id}
                     type="button"
                     onClick={() => {
-                      // Changing region resets city selection for consistency
-                      setForm(prev => ({ ...prev, region: r.id, destination: '' }))
+                      setForm(prev => ({ ...prev, region: r.id as RegionId, destination: '' }))
                       setErrors(prev => ({ ...prev, region: undefined, destination: undefined }))
                       setServerError(null)
                     }}
-                    className={`flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl border text-center transition-all focus:outline-none
+                    className={`flex flex-col items-center gap-1 py-3 px-2 rounded-xl border text-center transition-all focus:outline-none
                       ${active
                         ? 'border-accent-pink bg-pink-50 shadow-sm'
                         : 'border-slate-200 bg-white hover:border-pink-200 hover:bg-pink-50/40'}`}
                   >
-                    <span className="text-lg leading-none">{r.emoji}</span>
-                    <span className={`text-[11px] font-semibold leading-tight ${active ? 'text-accent-pink' : 'text-slate-500'}`}>
+                    <span className="text-xl leading-none">{r.emoji}</span>
+                    <span
+                      className="text-[11px] font-semibold leading-tight mt-0.5"
+                      style={{ color: active ? undefined : '#64748B' }}
+                    >
                       {r.label}
                     </span>
                   </button>
@@ -230,30 +415,17 @@ export default function CreateMoment({ userId, onComplete, onBack }: Props) {
             {errors.region && <p className="text-xs text-red-500 mt-1.5">{errors.region}</p>}
           </div>
 
-          {/* City — dropdown populated from selected region */}
+          {/* City — searchable combobox */}
           <div>
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
               City
             </label>
-            <select
+            <CitySearch
+              regionId={form.region}
               value={form.destination}
-              disabled={!form.region}
-              onChange={e => set('destination', e.target.value)}
-              className={`w-full px-4 py-2.5 rounded-xl border text-sm outline-none transition-colors appearance-none
-                ${errors.destination
-                  ? 'border-red-400 bg-red-50 text-text-main'
-                  : !form.region
-                    ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'
-                    : 'border-slate-200 bg-slate-50 text-text-main focus:border-primary focus:bg-white cursor-pointer'}`}
-            >
-              <option value="">
-                {form.region ? 'Pick a city…' : 'Select a region first'}
-              </option>
-              {form.region && REGION_CITIES[form.region].map(city => (
-                <option key={city} value={city}>{city}</option>
-              ))}
-            </select>
-            {errors.destination && <p className="text-xs text-red-500 mt-1">{errors.destination}</p>}
+              onChange={v => set('destination', v)}
+              error={errors.destination}
+            />
           </div>
 
           {/* Dates */}
