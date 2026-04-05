@@ -1,92 +1,76 @@
-import { useMemo, useRef, useState, useEffect } from 'react'
+import { City } from 'country-state-city'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 // ─── Regions ──────────────────────────────────────────────────────────────────
 
 const REGIONS = [
-  { id: 'south-america',         label: 'South America',         emoji: '🌎' },
+  { id: 'south-america',         label: 'South America',           emoji: '🌎' },
   { id: 'central-north-america', label: 'Central & North America', emoji: '🗽' },
-  { id: 'europe',                label: 'Europe',                 emoji: '🏰' },
-  { id: 'australia',             label: 'Australia',              emoji: '🐨' },
-  { id: 'africa',                label: 'Africa',                 emoji: '🦁' },
-  { id: 'asia',                  label: 'Asia',                   emoji: '⛩️' },
+  { id: 'europe',                label: 'Europe',                   emoji: '🏰' },
+  { id: 'australia',             label: 'Australia',                emoji: '🐨' },
+  { id: 'africa',                label: 'Africa',                   emoji: '🦁' },
+  { id: 'asia',                  label: 'Asia',                     emoji: '⛩️' },
 ] as const
 
 type RegionId = typeof REGIONS[number]['id']
 
-// ─── Cities ───────────────────────────────────────────────────────────────────
-// ~30–40 major cities per region, shown as suggestions when that region is active.
-// Typing searches the full ALL_CITIES list (all regions combined).
+// ─── Country codes per region ─────────────────────────────────────────────────
 
-const REGION_CITIES: Record<RegionId, string[]> = {
-  'south-america': [
-    'Buenos Aires', 'Rio de Janeiro', 'São Paulo', 'Bogotá', 'Lima', 'Santiago',
-    'Cartagena', 'Medellín', 'Cusco', 'Montevideo', 'Quito', 'La Paz', 'Asunción',
-    'Guayaquil', 'Cali', 'Florianópolis', 'Recife', 'Salvador', 'Belo Horizonte',
-    'Manaus', 'Bariloche', 'Valparaíso', 'Fortaleza', 'Santa Marta', 'Barranquilla',
-    'Iguazú', 'Puerto Madryn', 'Rosario', 'Córdoba', 'Punta Arenas',
-  ],
-  'central-north-america': [
-    'New York', 'Los Angeles', 'Miami', 'Chicago', 'Mexico City', 'Cancún', 'Tulum',
-    'Las Vegas', 'San Francisco', 'Toronto', 'Vancouver', 'Montréal', 'New Orleans',
-    'Nashville', 'Havana', 'San José', 'Guatemala City', 'Panama City', 'Antigua',
-    'Oaxaca', 'Playa del Carmen', 'Cabo San Lucas', 'Puerto Vallarta', 'Mérida',
-    'Kingston', 'San Juan', 'Nassau', 'Seattle', 'Austin', 'Denver',
-    'Guadalajara', 'Monterrey', 'Tegucigalpa', 'Managua', 'San Salvador',
-  ],
-  'europe': [
-    'Paris', 'Barcelona', 'Amsterdam', 'Rome', 'Lisbon', 'Prague', 'Berlin',
-    'Athens', 'Budapest', 'Dubrovnik', 'London', 'Madrid', 'Vienna', 'Brussels',
-    'Copenhagen', 'Stockholm', 'Oslo', 'Zürich', 'Milan', 'Venice', 'Florence',
-    'Porto', 'Seville', 'Munich', 'Warsaw', 'Kraków', 'Edinburgh', 'Dublin',
-    'Reykjavík', 'Tallinn', 'Riga', 'Split', 'Santorini', 'Mykonos', 'Sofia',
-    'Bucharest', 'Sarajevo', 'Kotor', 'Mostar', 'Ljubljana', 'Bratislava',
-    'Helsinki', 'Geneva', 'Naples', 'Palermo', 'Valencia', 'Bilbao',
-  ],
-  'australia': [
-    'Sydney', 'Melbourne', 'Brisbane', 'Perth', 'Adelaide', 'Gold Coast', 'Cairns',
-    'Darwin', 'Hobart', 'Canberra', 'Byron Bay', 'Alice Springs', 'Broome',
-    'Whitsundays', 'Margaret River', 'Noosa', 'Airlie Beach', 'Port Douglas',
-    'Auckland', 'Queenstown', 'Wellington', 'Christchurch', 'Rotorua', 'Taupo',
-    'Nadi', 'Suva', 'Apia', 'Rarotonga', 'Noumea', 'Port Vila',
-  ],
-  'africa': [
-    'Marrakech', 'Cape Town', 'Nairobi', 'Cairo', 'Zanzibar', 'Addis Ababa',
-    'Lagos', 'Casablanca', 'Accra', 'Dakar', 'Johannesburg', 'Durban',
-    'Kampala', 'Dar es Salaam', 'Kigali', 'Maputo', 'Lusaka', 'Windhoek',
-    'Tunis', 'Abidjan', 'Luanda', 'Port Louis', 'Victoria', 'Sharm El-Sheikh',
-    'Hurghada', 'Luxor', 'Fez', 'Tangier', 'Essaouira', 'Agadir',
-    'Lome', 'Bamako', 'Libreville', 'Malindi', 'Mombasa', 'Arusha',
-  ],
-  'asia': [
-    'Tokyo', 'Kyoto', 'Seoul', 'Shanghai', 'Beijing', 'Hong Kong', 'Osaka',
-    'Taipei', 'Chengdu', 'Busan', 'Bangkok', 'Bali', 'Hanoi', 'Ho Chi Minh City',
-    'Singapore', 'Kuala Lumpur', 'Chiang Mai', 'Phuket', 'Phnom Penh', 'Yangon',
-    'Jakarta', 'Manila', 'Mumbai', 'New Delhi', 'Bangalore', 'Goa', 'Jaipur',
-    'Agra', 'Kolkata', 'Chennai', 'Dubai', 'Abu Dhabi', 'Doha', 'Istanbul',
-    'Tbilisi', 'Kathmandu', 'Colombo', 'Malé', 'Siem Reap', 'Luang Prabang',
-    'Da Nang', 'Nha Trang', 'Ulaanbaatar', 'Almaty', 'Tashkent', 'Amman',
-    'Beirut', 'Muscat', 'Riyadh', 'Tel Aviv', 'Yerevan', 'Baku',
-  ],
+const REGION_COUNTRY_CODES: Record<RegionId, string[]> = {
+  'south-america':         ['AR','BR','CL','CO','PE','UY','EC','BO','PY','VE','GY','SR'],
+  'central-north-america': ['US','CA','MX','GT','BZ','HN','SV','NI','CR','PA','CU','JM','DO','TT','BB','BS'],
+  'europe':                ['FR','DE','GB','IT','ES','PT','NL','BE','CH','AT','SE','NO','DK','FI','GR','PL','CZ','HU','RO','BG','HR','RS','SK','SI','EE','LV','LT','IE','IS','AL','BA','ME','MK','LU','CY','MT','MD','UA','BY','RU'],
+  'australia':             ['AU','NZ','FJ','PG','WS','TO','VU','SB'],
+  'africa':                ['ZA','EG','NG','KE','ET','MA','TZ','GH','TN','DZ','SN','MZ','UG','ZM','ZW','CM','CI','AO','MG','RW','SD','CD','MU','SC','NA','BW','LY','DJ','SL','GM'],
+  'asia':                  ['CN','JP','KR','IN','TH','VN','ID','SG','MY','PH','TW','HK','AE','TR','SA','QA','KW','BH','OM','JO','LB','IL','GE','AM','AZ','NP','LK','BD','PK','MV','KH','LA','MM','MN','UZ','KZ'],
 }
 
-// Flat sorted list of every city for cross-region search
-const ALL_CITIES: string[] = Array.from(new Set(Object.values(REGION_CITIES).flat())).sort(
-  (a, b) => a.localeCompare(b),
-)
+// ─── Featured cities (shown immediately on region select, always in the list) ─
 
-// ─── Activity Types ───────────────────────────────────────────────────────────
+const FEATURED_CITIES: Record<RegionId, string[]> = {
+  'south-america':         ['Buenos Aires','Rio de Janeiro','São Paulo','Bogotá','Lima','Santiago','Cartagena','Medellín','Cusco','Montevideo','Quito','La Paz','Fortaleza','Valparaíso','Florianópolis'],
+  'central-north-america': ['New York','Los Angeles','Miami','Mexico City','Cancún','Tulum','Chicago','Toronto','Las Vegas','San Francisco','New Orleans','Vancouver','Nashville','Montréal','Havana'],
+  'europe':                ['Paris','Barcelona','Amsterdam','Rome','Lisbon','Prague','Berlin','Athens','Budapest','Dubrovnik','London','Madrid','Vienna','Copenhagen','Zürich'],
+  'australia':             ['Sydney','Melbourne','Brisbane','Perth','Gold Coast','Auckland','Queenstown','Cairns','Byron Bay','Darwin','Adelaide','Christchurch','Wellington','Nadi','Rotorua'],
+  'africa':                ['Marrakech','Cape Town','Nairobi','Cairo','Zanzibar','Addis Ababa','Lagos','Casablanca','Accra','Dakar','Johannesburg','Kigali','Dar es Salaam','Sharm El-Sheikh','Luxor'],
+  'asia':                  ['Tokyo','Bangkok','Bali','Singapore','Seoul','Hong Kong','Dubai','Hanoi','Kuala Lumpur','Chiang Mai','Kyoto','Osaka','Istanbul','Mumbai','New Delhi'],
+}
 
-const ACTIVITY_TYPES = [
-  { id: 'landing',   label: 'Landing',   emoji: '✈️' },
-  { id: 'stay',      label: 'Stay',      emoji: '🏨' },
-  { id: 'trip',      label: 'Trip',      emoji: '🥾' },
-  { id: 'nightlife', label: 'Nightlife', emoji: '🍻' },
-] as const
+// ─── City helpers ─────────────────────────────────────────────────────────────
 
-type ActivityType = typeof ACTIVITY_TYPES[number]['id']
+// Filter out administrative region names that aren't practical city searches
+function isUsableCityName(name: string): boolean {
+  if (!name || name.length > 42) return false
+  const l = name.toLowerCase()
+  if (l.includes('municipality')) return false
+  if (l.includes('kabupaten'))    return false  // Indonesian admin divisions
+  if (l.includes('prefecture'))   return false
+  if (l.startsWith('kota '))      return false  // Indonesian "City of X"
+  if (l.includes(' and ') && l.includes(' city')) return false
+  return true
+}
 
-// ─── City Search Combobox ─────────────────────────────────────────────────────
+// Per-session cache: builds once per region selection
+const regionCityCache = new Map<RegionId, string[]>()
+
+function buildRegionCities(regionId: RegionId): string[] {
+  if (regionCityCache.has(regionId)) return regionCityCache.get(regionId)!
+  const set = new Set<string>()
+  // Always include curated featured cities
+  for (const c of FEATURED_CITIES[regionId]) set.add(c)
+  // Add library cities with quality filter
+  for (const code of REGION_COUNTRY_CODES[regionId]) {
+    for (const city of City.getCitiesOfCountry(code) ?? []) {
+      if (isUsableCityName(city.name)) set.add(city.name)
+    }
+  }
+  const sorted = Array.from(set).sort((a, b) => a.localeCompare(b))
+  regionCityCache.set(regionId, sorted)
+  return sorted
+}
+
+// ─── CitySearch combobox ──────────────────────────────────────────────────────
 
 function CitySearch({
   regionId,
@@ -95,52 +79,70 @@ function CitySearch({
   error,
 }: {
   regionId: RegionId | null
-  value: string
+  value:    string
   onChange: (v: string) => void
-  error?: string
+  error?:   string
 }) {
-  const [open, setOpen] = useState(false)
-  const [cursor, setCursor] = useState(-1)
+  const [allCities, setAllCities] = useState<string[]>([])
+  const [computing, setComputing] = useState(false)
+  const [open,      setOpen]      = useState(false)
+  const [cursor,    setCursor]    = useState(-1)
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef  = useRef<HTMLUListElement>(null)
 
-  // Sync cursor reset when suggestions change
-  useEffect(() => { setCursor(-1) }, [value])
+  // Build the full regional city list asynchronously when region changes
+  useEffect(() => {
+    if (!regionId) { setAllCities([]); return }
+    if (regionCityCache.has(regionId)) {
+      setAllCities(regionCityCache.get(regionId)!)
+      return
+    }
+    setComputing(true)
+    const tid = setTimeout(() => {
+      const cities = buildRegionCities(regionId)
+      setAllCities(cities)
+      setComputing(false)
+    }, 0)
+    return () => clearTimeout(tid)
+  }, [regionId])
 
-  const suggestions = useMemo(() => {
-    if (!regionId) return []
-    const q        = value.trim().toLowerCase()
-    const regional = REGION_CITIES[regionId]
-    if (!q) return regional.slice(0, 15)
-    const regionHits = regional.filter(c => c.toLowerCase().includes(q))
-    const globalHits = ALL_CITIES.filter(c => !regional.includes(c) && c.toLowerCase().includes(q))
-    return [...regionHits, ...globalHits].slice(0, 25)
-  }, [value, regionId])
+  // Reset cursor when suggestions change
+  useEffect(() => { setCursor(-1) }, [value, regionId])
 
   // Scroll highlighted item into view
   useEffect(() => {
     if (cursor < 0 || !listRef.current) return
-    const item = listRef.current.children[cursor] as HTMLElement
-    item?.scrollIntoView({ block: 'nearest' })
+    const el = listRef.current.children[cursor] as HTMLElement | undefined
+    el?.scrollIntoView({ block: 'nearest' })
   }, [cursor])
+
+  const suggestions = useMemo(() => {
+    if (!regionId) return []
+    const q = value.trim().toLowerCase()
+    if (!q) return FEATURED_CITIES[regionId]  // immediately show featured cities
+    const src = allCities.length ? allCities : FEATURED_CITIES[regionId]
+    // Regional matches, limited to 25
+    return src.filter(c => c.toLowerCase().includes(q)).slice(0, 25)
+  }, [value, regionId, allCities])
 
   function select(city: string) {
     onChange(city)
     setOpen(false)
     setCursor(-1)
+    inputRef.current?.blur()
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (!open) { if (e.key === 'ArrowDown') setOpen(true); return }
+    if (!open) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); setOpen(true) }
+      return
+    }
     if (e.key === 'ArrowDown') {
-      e.preventDefault()
-      setCursor(c => Math.min(c + 1, suggestions.length - 1))
+      e.preventDefault(); setCursor(c => Math.min(c + 1, suggestions.length - 1))
     } else if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      setCursor(c => Math.max(c - 1, -1))
+      e.preventDefault(); setCursor(c => Math.max(c - 1, -1))
     } else if (e.key === 'Enter' && cursor >= 0) {
-      e.preventDefault()
-      select(suggestions[cursor])
+      e.preventDefault(); select(suggestions[cursor])
     } else if (e.key === 'Escape') {
       setOpen(false)
     }
@@ -156,7 +158,11 @@ function CitySearch({
           type="text"
           value={value}
           disabled={isDisabled}
-          placeholder={isDisabled ? 'Select a region first' : 'Search or type a city…'}
+          placeholder={
+            isDisabled   ? 'Select a region first' :
+            computing    ? 'Loading cities…' :
+            'Search any city…'
+          }
           autoComplete="off"
           onChange={e => { onChange(e.target.value); setOpen(true) }}
           onFocus={() => setOpen(true)}
@@ -169,11 +175,17 @@ function CitySearch({
                 ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'
                 : 'border-slate-200 bg-slate-50 text-text-main focus:border-primary focus:bg-white'}`}
         />
-        {/* Chevron / search icon */}
         <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2" style={{ color: '#94A3B8' }}>
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
-          </svg>
+          {computing ? (
+            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+            </svg>
+          ) : (
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/>
+            </svg>
+          )}
         </span>
       </div>
 
@@ -194,11 +206,11 @@ function CitySearch({
               <button
                 type="button"
                 onMouseDown={() => select(city)}
-                className="w-full px-4 py-2.5 text-left text-sm transition-colors focus:outline-none"
+                className="w-full px-4 py-2.5 text-left text-sm focus:outline-none"
                 style={{
-                  background: i === cursor ? '#EFF6FF' : 'transparent',
-                  color:      i === cursor ? '#1D4ED8' : '#0F172A',
-                  fontWeight: i === cursor ? 600 : 400,
+                  background:   i === cursor ? '#EFF6FF' : 'transparent',
+                  color:        i === cursor ? '#1D4ED8' : '#0F172A',
+                  fontWeight:   i === cursor ? 600 : 400,
                   borderBottom: i < suggestions.length - 1 ? '1px solid #F8FAFC' : 'none',
                 }}
               >
@@ -213,6 +225,17 @@ function CitySearch({
     </div>
   )
 }
+
+// ─── Activity Types ───────────────────────────────────────────────────────────
+
+const ACTIVITY_TYPES = [
+  { id: 'landing',   label: 'Landing',   emoji: '✈️' },
+  { id: 'stay',      label: 'Stay',      emoji: '🏨' },
+  { id: 'trip',      label: 'Trip',      emoji: '🥾' },
+  { id: 'nightlife', label: 'Nightlife', emoji: '🍻' },
+] as const
+
+type ActivityType = typeof ACTIVITY_TYPES[number]['id']
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -255,12 +278,12 @@ export default function CreateMoment({ userId, onComplete, onBack }: Props) {
     spots:        4,
     description:  '',
   })
-  const [errors,        setErrors]        = useState<FormErrors>({})
-  const [loading,       setLoading]       = useState(false)
-  const [serverError,   setServerError]   = useState<string | null>(null)
-  const [imageFile,     setImageFile]     = useState<File | null>(null)
+  const [errors,          setErrors]          = useState<FormErrors>({})
+  const [loading,         setLoading]         = useState(false)
+  const [serverError,     setServerError]     = useState<string | null>(null)
+  const [imageFile,       setImageFile]       = useState<File | null>(null)
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null)
-  const [uploadError,   setUploadError]   = useState<string | null>(null)
+  const [uploadError,     setUploadError]     = useState<string | null>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
 
   function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -284,6 +307,17 @@ export default function CreateMoment({ userId, onComplete, onBack }: Props) {
     setServerError(null)
   }
 
+  function handleStartDateChange(newStart: string) {
+    // Auto-clear endDate if it would become invalid
+    setForm(prev => ({
+      ...prev,
+      startDate: newStart,
+      endDate: (prev.endDate && newStart && prev.endDate < newStart) ? '' : prev.endDate,
+    }))
+    setErrors(prev => ({ ...prev, startDate: undefined, endDate: undefined }))
+    setServerError(null)
+  }
+
   function validate(): boolean {
     const next: FormErrors = {}
     if (!form.title.trim())       next.title        = 'Title is required'
@@ -292,7 +326,7 @@ export default function CreateMoment({ userId, onComplete, onBack }: Props) {
     if (!form.startDate)          next.startDate    = 'Start date is required'
     if (!form.endDate)            next.endDate      = 'End date is required'
     else if (form.startDate && form.endDate < form.startDate)
-                                  next.endDate      = 'End date must be after start date'
+                                  next.endDate      = 'End date must be on or after start date'
     if (!form.activityType)       next.activityType = 'Please choose an activity type'
     setErrors(next)
     return Object.keys(next).length === 0
@@ -338,6 +372,10 @@ export default function CreateMoment({ userId, onComplete, onBack }: Props) {
     onComplete()
   }
 
+  // Derived: is endDate invalid given current startDate?
+  const endDateBeforeStart =
+    !!form.startDate && !!form.endDate && form.endDate < form.startDate
+
   return (
     <div className="min-h-screen bg-bg-base flex items-center justify-center p-4">
       <div className="user-card w-full max-w-lg p-8">
@@ -379,7 +417,7 @@ export default function CreateMoment({ userId, onComplete, onBack }: Props) {
             {errors.title && <p className="text-xs text-red-500 mt-1">{errors.title}</p>}
           </div>
 
-          {/* Region — 2-column grid (3 per row × 2 rows) */}
+          {/* Region */}
           <div>
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
               Region
@@ -415,7 +453,7 @@ export default function CreateMoment({ userId, onComplete, onBack }: Props) {
             {errors.region && <p className="text-xs text-red-500 mt-1.5">{errors.region}</p>}
           </div>
 
-          {/* City — searchable combobox */}
+          {/* City — searchable combobox backed by country-state-city */}
           <div>
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
               City
@@ -437,7 +475,7 @@ export default function CreateMoment({ userId, onComplete, onBack }: Props) {
               <input
                 type="date"
                 value={form.startDate}
-                onChange={e => set('startDate', e.target.value)}
+                onChange={e => handleStartDateChange(e.target.value)}
                 className={`w-full px-4 py-2.5 rounded-xl border text-sm text-text-main outline-none transition-colors
                   ${errors.startDate
                     ? 'border-red-400 bg-red-50'
@@ -455,11 +493,15 @@ export default function CreateMoment({ userId, onComplete, onBack }: Props) {
                 min={form.startDate || undefined}
                 onChange={e => set('endDate', e.target.value)}
                 className={`w-full px-4 py-2.5 rounded-xl border text-sm text-text-main outline-none transition-colors
-                  ${errors.endDate
+                  ${errors.endDate || endDateBeforeStart
                     ? 'border-red-400 bg-red-50'
                     : 'border-slate-200 bg-slate-50 focus:border-primary focus:bg-white'}`}
               />
-              {errors.endDate && <p className="text-xs text-red-500 mt-1">{errors.endDate}</p>}
+              {(errors.endDate || endDateBeforeStart) && (
+                <p className="text-xs text-red-500 mt-1">
+                  {errors.endDate ?? 'End date must be on or after start date'}
+                </p>
+              )}
             </div>
           </div>
 
@@ -582,6 +624,7 @@ export default function CreateMoment({ userId, onComplete, onBack }: Props) {
             />
             {uploadError && <p className="text-xs text-red-500 mt-1">{uploadError}</p>}
           </div>
+
         </div>
 
         {serverError && (
