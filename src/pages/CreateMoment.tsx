@@ -83,15 +83,18 @@ function CitySearch({
   onChange: (v: string) => void
   error?:   string
 }) {
-  const [allCities, setAllCities] = useState<string[]>([])
-  const [computing, setComputing] = useState(false)
-  const [open,      setOpen]      = useState(false)
-  const [cursor,    setCursor]    = useState(-1)
+  const [allCities,     setAllCities]     = useState<string[]>([])
+  const [computing,     setComputing]     = useState(false)
+  const [open,          setOpen]          = useState(false)
+  const [cursor,        setCursor]        = useState(-1)
+  // Debounced query — prevents re-filtering thousands of cities on every keystroke
+  const [debouncedQuery, setDebouncedQuery] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef  = useRef<HTMLUListElement>(null)
 
   // Build the full regional city list asynchronously when region changes
   useEffect(() => {
+    setDebouncedQuery('')
     if (!regionId) { setAllCities([]); return }
     if (regionCityCache.has(regionId)) {
       setAllCities(regionCityCache.get(regionId)!)
@@ -106,8 +109,14 @@ function CitySearch({
     return () => clearTimeout(tid)
   }, [regionId])
 
+  // Debounce the typed query by 150 ms (avoids filtering 60k+ cities per keystroke)
+  useEffect(() => {
+    const tid = setTimeout(() => setDebouncedQuery(value.trim().toLowerCase()), 150)
+    return () => clearTimeout(tid)
+  }, [value])
+
   // Reset cursor when suggestions change
-  useEffect(() => { setCursor(-1) }, [value, regionId])
+  useEffect(() => { setCursor(-1) }, [debouncedQuery, regionId])
 
   // Scroll highlighted item into view
   useEffect(() => {
@@ -118,12 +127,15 @@ function CitySearch({
 
   const suggestions = useMemo(() => {
     if (!regionId) return []
-    const q = value.trim().toLowerCase()
-    if (!q) return FEATURED_CITIES[regionId]  // immediately show featured cities
+    // Empty query → show featured cities instantly (no wait for debounce)
+    if (!debouncedQuery) return FEATURED_CITIES[regionId]
     const src = allCities.length ? allCities : FEATURED_CITIES[regionId]
-    // Regional matches, limited to 25
-    return src.filter(c => c.toLowerCase().includes(q)).slice(0, 25)
-  }, [value, regionId, allCities])
+    // Cities starting with the query rank above cities that merely contain it
+    const q          = debouncedQuery
+    const startsWith = src.filter(c => c.toLowerCase().startsWith(q))
+    const contains   = src.filter(c => !c.toLowerCase().startsWith(q) && c.toLowerCase().includes(q))
+    return [...startsWith, ...contains].slice(0, 25)
+  }, [debouncedQuery, regionId, allCities])
 
   function select(city: string) {
     onChange(city)
@@ -325,8 +337,6 @@ export default function CreateMoment({ userId, onComplete, onBack }: Props) {
     if (!form.region)             next.region       = 'Please choose a region'
     if (!form.startDate)          next.startDate    = 'Start date is required'
     if (!form.endDate)            next.endDate      = 'End date is required'
-    else if (form.startDate && form.endDate < form.startDate)
-                                  next.endDate      = 'End date must be on or after start date'
     if (!form.activityType)       next.activityType = 'Please choose an activity type'
     setErrors(next)
     return Object.keys(next).length === 0
@@ -371,10 +381,6 @@ export default function CreateMoment({ userId, onComplete, onBack }: Props) {
     if (error) { setServerError(error.message); return }
     onComplete()
   }
-
-  // Derived: is endDate invalid given current startDate?
-  const endDateBeforeStart =
-    !!form.startDate && !!form.endDate && form.endDate < form.startDate
 
   return (
     <div className="min-h-screen bg-bg-base flex items-center justify-center p-4">
@@ -493,14 +499,12 @@ export default function CreateMoment({ userId, onComplete, onBack }: Props) {
                 min={form.startDate || undefined}
                 onChange={e => set('endDate', e.target.value)}
                 className={`w-full px-4 py-2.5 rounded-xl border text-sm text-text-main outline-none transition-colors
-                  ${errors.endDate || endDateBeforeStart
+                  ${errors.endDate
                     ? 'border-red-400 bg-red-50'
                     : 'border-slate-200 bg-slate-50 focus:border-primary focus:bg-white'}`}
               />
-              {(errors.endDate || endDateBeforeStart) && (
-                <p className="text-xs text-red-500 mt-1">
-                  {errors.endDate ?? 'End date must be on or after start date'}
-                </p>
+              {errors.endDate && (
+                <p className="text-xs text-red-500 mt-1">{errors.endDate}</p>
               )}
             </div>
           </div>
