@@ -497,11 +497,14 @@ export default function CreateMoment({ userId, onComplete, onBack }: Props) {
                 type="date"
                 value={form.endDate}
                 min={form.startDate || undefined}
+                disabled={!form.startDate}
                 onChange={e => set('endDate', e.target.value)}
-                className={`w-full px-4 py-2.5 rounded-xl border text-sm text-text-main outline-none transition-colors
-                  ${errors.endDate
-                    ? 'border-red-400 bg-red-50'
-                    : 'border-slate-200 bg-slate-50 focus:border-primary focus:bg-white'}`}
+                className={`w-full px-4 py-2.5 rounded-xl border text-sm outline-none transition-colors
+                  ${!form.startDate
+                    ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'
+                    : errors.endDate
+                      ? 'border-red-400 bg-red-50 text-text-main'
+                      : 'border-slate-200 bg-slate-50 text-text-main focus:border-primary focus:bg-white'}`}
               />
               {errors.endDate && (
                 <p className="text-xs text-red-500 mt-1">{errors.endDate}</p>

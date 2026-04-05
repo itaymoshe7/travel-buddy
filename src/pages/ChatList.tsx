@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabase'
 interface ChatEntry {
   chatId:         string
   chatName:       string
-  avatarUrl:      string | null
+  avatarUrl:      string | null  // moment image_url for groups, user avatar for DMs
   avatarName:     string | null
   lastMessage:    string | null
   lastMessageAt:  string | null
@@ -74,7 +74,7 @@ export default function ChatList({ userId, onOpenChat }: Props) {
       const entries: ChatEntry[] = (data ?? []).map((row: any) => ({
         chatId:        row.chat_id,
         chatName:      row.moment_id ? (row.moment_title ?? 'Group Chat') : (row.full_name ?? 'Traveller'),
-        avatarUrl:     row.moment_id ? null : (row.avatar_url ?? null),
+        avatarUrl:     row.moment_id ? (row.moment_image_url ?? null) : (row.avatar_url ?? null),
         avatarName:    row.moment_id ? (row.moment_title ?? 'G') : (row.full_name ?? null),
         lastMessage:   row.last_message  ?? null,
         lastMessageAt: row.last_message_at ?? null,

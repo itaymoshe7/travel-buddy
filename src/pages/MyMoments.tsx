@@ -168,11 +168,7 @@ function MomentItem({
 
         {/* Bottom content */}
         <div className="absolute bottom-0 left-0 right-0 p-4 z-10 cursor-pointer" onClick={onSelect}>
-          <div className="flex items-end gap-2.5">
-            <span className="text-2xl leading-none shrink-0 mb-0.5">
-              {ACTIVITY_EMOJI[moment.activity_type] ?? '📍'}
-            </span>
-            <div className="flex-1 min-w-0">
+          <div className="min-w-0">
               <p className="text-sm font-bold truncate" style={{ color: '#FFFFFF', textShadow: '0 1px 4px rgba(0,0,0,0.60)' }}>{moment.title}</p>
               <p className="text-xs mt-0.5 truncate" style={{ color: '#FFFFFF', textShadow: '0 1px 3px rgba(0,0,0,0.55)' }}>
                 <span style={{ color: '#FFFFFF' }}>📍 {moment.destination}</span>
@@ -183,7 +179,6 @@ function MomentItem({
                   {moment.description}
                 </p>
               )}
-            </div>
           </div>
           {moment.status && (
             <div className="mt-2">
