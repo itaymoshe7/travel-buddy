@@ -320,7 +320,7 @@ function MomentCard({
           <div className="flex items-center gap-2.5">
             <Avatar url={creator?.avatar_url ?? null} name={creator?.full_name ?? null} />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold truncate" style={{ color: '#FFFFFF' }}>
+              <p className="text-sm font-semibold truncate" style={{ color: '#FFFFFF', textShadow: '0 1px 4px rgba(0,0,0,0.60)' }}>
                 {creator?.full_name ?? 'Traveller'}
               </p>
               {creator?.social_link ? (
@@ -398,18 +398,18 @@ function MomentCard({
 
           {/* Bottom: title, description, details, participants, time */}
           <div>
-            <h2 className="text-xl font-bold leading-snug mb-1.5" style={{ color: '#FFFFFF' }}>
+            <h2 className="text-xl font-bold leading-snug mb-1.5" style={{ color: '#FFFFFF', textShadow: '0 2px 8px rgba(0,0,0,0.70)' }}>
               {moment.title}
             </h2>
 
             {moment.description && (
-              <p className="text-sm mb-3 line-clamp-2" style={{ color: '#FFFFFF' }}>
+              <p className="text-sm mb-3 line-clamp-2" style={{ color: '#FFFFFF', textShadow: '0 1px 4px rgba(0,0,0,0.55)' }}>
                 {moment.description}
               </p>
             )}
 
             {/* Details: destination · dates · spots — pure white medium weight */}
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3 text-xs font-medium" style={{ color: '#FFFFFF' }}>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3 text-xs font-medium" style={{ color: '#FFFFFF', textShadow: '0 1px 4px rgba(0,0,0,0.55)' }}>
               <span>📍 {moment.destination}</span>
               {dateStr && (
                 <>
@@ -688,8 +688,10 @@ export default function ExplorePage({ userId, onNotifications, onOpenChat, onSel
     load()
   }, [userId])
 
-  // Client-side filtering: activity AND region
+  // Client-side filtering: activity AND region — hide moments whose end_date has passed
+  const today = new Date().toISOString().split('T')[0]
   const filtered = moments.filter(m => {
+    if (m.end_date && m.end_date < today) return false
     const matchActivity = activityFilter === 'all' || m.activity_type === activityFilter
     const matchRegion   = regionFilter   === 'all' || m.region        === regionFilter
     return matchActivity && matchRegion
