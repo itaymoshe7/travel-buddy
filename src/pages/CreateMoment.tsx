@@ -167,7 +167,7 @@ function DatePicker({
   value:        string            // ISO yyyy-mm-dd or ''
   onChange:     (iso: string) => void
   disabled?:    boolean
-  disabledDays?: { before?: Date } // react-day-picker Matcher
+  disabledDays?: (date: Date) => boolean
   placeholder?: string
   error?:       string
 }) {
@@ -675,7 +675,9 @@ export default function CreateMoment({ userId, onComplete, onBack }: Props) {
                 value={form.endDate}
                 onChange={v => set('endDate', v)}
                 disabled={!form.startDate}
-                disabledDays={form.startDate ? { before: toDate(form.startDate)! } : undefined}
+                disabledDays={form.startDate
+                  ? (date: Date) => date < toDate(form.startDate)!
+                  : undefined}
                 placeholder="Pick a date"
                 error={errors.endDate}
               />
