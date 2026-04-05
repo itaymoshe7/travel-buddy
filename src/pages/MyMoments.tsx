@@ -132,9 +132,11 @@ function MomentItem({
           className="absolute inset-0 w-full h-full object-cover"
         />
 
-        {/* Gradient overlay */}
+        {/* Gradient overlay — bottom for text, top for action buttons */}
         <div className="absolute inset-0"
-          style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.90) 0%, rgba(0,0,0,0.30) 50%, transparent 100%)' }} />
+          style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.50) 45%, transparent 100%)' }} />
+        <div className="absolute inset-0"
+          style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, transparent 38%)' }} />
 
         {/* Floating actions — top right */}
         <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5">
@@ -171,13 +173,13 @@ function MomentItem({
               {ACTIVITY_EMOJI[moment.activity_type] ?? '📍'}
             </span>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-white truncate">{moment.title}</p>
-              <p className="text-xs mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.72)' }}>
-                📍 {moment.destination}
-                {dateStr && <span style={{ color: 'rgba(255,255,255,0.45)' }}> · {dateStr}</span>}
+              <p className="text-sm font-bold truncate" style={{ color: '#FFFFFF', textShadow: '0 1px 4px rgba(0,0,0,0.60)' }}>{moment.title}</p>
+              <p className="text-xs mt-0.5 truncate" style={{ color: '#FFFFFF', textShadow: '0 1px 3px rgba(0,0,0,0.55)' }}>
+                <span style={{ color: '#FFFFFF' }}>📍 {moment.destination}</span>
+                {dateStr && <span style={{ color: 'rgba(255,255,255,0.75)' }}> · {dateStr}</span>}
               </p>
               {moment.description && (
-                <p className="text-xs mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                <p className="text-xs mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.85)', textShadow: '0 1px 3px rgba(0,0,0,0.50)' }}>
                   {moment.description}
                 </p>
               )}

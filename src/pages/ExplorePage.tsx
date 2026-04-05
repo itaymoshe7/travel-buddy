@@ -309,9 +309,11 @@ function MomentCard({
           className="absolute inset-0 w-full h-full object-cover"
         />
 
-        {/* Gradient: from-black/80 via-black/40 to-transparent */}
+        {/* Dual overlay: bottom gradient keeps bottom text readable, top gradient keeps creator readable */}
         <div className="absolute inset-0"
-          style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.40) 55%, transparent 100%)' }} />
+          style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.55) 45%, transparent 100%)' }} />
+        <div className="absolute inset-0"
+          style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.62) 0%, transparent 42%)' }} />
 
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-between p-5" style={{ minHeight: 300 }}>
@@ -329,13 +331,13 @@ function MomentCard({
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-xs truncate block"
-                  style={{ color: 'rgba(255,255,255,0.55)' }}
+                  style={{ color: 'rgba(255,255,255,0.75)', textShadow: '0 1px 3px rgba(0,0,0,0.50)' }}
                   onClick={e => e.stopPropagation()}
                 >
                   {(() => { try { return new URL(creator.social_link!).hostname.replace('www.', '') } catch { return creator.social_link } })()}
                 </a>
               ) : creator?.bio ? (
-                <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.55)' }}>{creator.bio}</p>
+                <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.75)', textShadow: '0 1px 3px rgba(0,0,0,0.50)' }}>{creator.bio}</p>
               ) : null}
             </div>
 
@@ -352,7 +354,7 @@ function MomentCard({
                 style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)' }}
                 aria-label="Options"
               >
-                <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#FFFFFF' }}>
                   <circle cx="10" cy="4"  r="1.5" />
                   <circle cx="10" cy="10" r="1.5" />
                   <circle cx="10" cy="16" r="1.5" />
@@ -408,24 +410,24 @@ function MomentCard({
               </p>
             )}
 
-            {/* Details: destination · dates · spots — pure white medium weight */}
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3 text-xs font-medium" style={{ color: '#FFFFFF', textShadow: '0 1px 4px rgba(0,0,0,0.55)' }}>
-              <span>📍 {moment.destination}</span>
+            {/* Details: destination · dates · spots */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3 text-xs font-medium" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.60)' }}>
+              <span style={{ color: '#FFFFFF' }}>📍 {moment.destination}</span>
               {dateStr && (
                 <>
-                  <span style={{ color: 'rgba(255,255,255,0.35)' }}>·</span>
-                  <span>🗓 {dateStr}</span>
+                  <span style={{ color: 'rgba(255,255,255,0.50)' }}>·</span>
+                  <span style={{ color: '#FFFFFF' }}>🗓 {dateStr}</span>
                 </>
               )}
-              <span style={{ color: 'rgba(255,255,255,0.35)' }}>·</span>
-              <span>{isFull ? '🔴 Full' : `👥 ${spotsLeft} spot${spotsLeft !== 1 ? 's' : ''} left`}</span>
+              <span style={{ color: 'rgba(255,255,255,0.50)' }}>·</span>
+              <span style={{ color: '#FFFFFF' }}>{isFull ? '🔴 Full' : `👥 ${spotsLeft} spot${spotsLeft !== 1 ? 's' : ''} left`}</span>
             </div>
 
             {participants.length > 0 && (
-              <ParticipantAvatars participants={participants} mut="rgba(255,255,255,0.60)" />
+              <ParticipantAvatars participants={participants} mut="rgba(255,255,255,0.78)" />
             )}
 
-            <p className="text-[11px] mt-1.5" style={{ color: 'rgba(255,255,255,0.38)' }}>
+            <p className="text-[11px] mt-1.5" style={{ color: 'rgba(255,255,255,0.68)', textShadow: '0 1px 3px rgba(0,0,0,0.50)' }}>
               {timeAgo(moment.created_at)}
             </p>
           </div>
