@@ -1,5 +1,7 @@
 import { City } from 'country-state-city'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { DayPicker } from 'react-day-picker'
+import 'react-day-picker/src/style.css'
 import { supabase } from '../lib/supabase'
 
 // ─── Regions ──────────────────────────────────────────────────────────────────
@@ -137,6 +139,115 @@ function buildRegionCities(regionId: RegionId): string[] {
   const sorted = Array.from(set).sort((a, b) => a.localeCompare(b))
   regionCityCache.set(regionId, sorted)
   return sorted
+}
+
+// ─── DatePicker popover ───────────────────────────────────────────────────────
+// Uses react-day-picker's `disabled` matcher so dates are greyed out at the
+// calendar level — works correctly on mobile where `min` is often ignored.
+
+function toDate(iso: string): Date | undefined {
+  if (!iso) return undefined
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Date(y, m - 1, d)   // local midnight, no timezone shift
+}
+
+function toISO(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+function DatePicker({
+  value,
+  onChange,
+  disabled: isDisabled,
+  disabledDays,
+  placeholder,
+  error,
+}: {
+  value:        string            // ISO yyyy-mm-dd or ''
+  onChange:     (iso: string) => void
+  disabled?:    boolean
+  disabledDays?: { before?: Date } // react-day-picker Matcher
+  placeholder?: string
+  error?:       string
+}) {
+  const [open, setOpen] = useState(false)
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const selected = toDate(value)
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return
+    function onDown(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [open])
+
+  const display = selected
+    ? selected.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : placeholder ?? 'Select date'
+
+  return (
+    <div ref={wrapRef} className="relative">
+      {/* Trigger */}
+      <button
+        type="button"
+        disabled={isDisabled}
+        onClick={() => setOpen(o => !o)}
+        className={`w-full px-4 py-2.5 rounded-xl border text-sm text-left outline-none transition-colors flex items-center justify-between gap-2
+          ${isDisabled
+            ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'
+            : error
+              ? 'border-red-400 bg-red-50 text-text-main'
+              : 'border-slate-200 bg-slate-50 text-text-main focus:border-primary focus:bg-white'}`}
+      >
+        <span style={{ color: selected ? undefined : '#94A3B8' }}>{display}</span>
+        {/* Calendar icon */}
+        <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}
+          style={{ color: isDisabled ? '#CBD5E1' : '#94A3B8' }}>
+          <rect x="3" y="4" width="18" height="18" rx="3" ry="3" />
+          <path strokeLinecap="round" d="M16 2v4M8 2v4M3 10h18" />
+        </svg>
+      </button>
+
+      {/* Popover */}
+      {open && !isDisabled && (
+        <div
+          className="absolute z-50 rounded-2xl overflow-hidden"
+          style={{
+            top: 'calc(100% + 6px)',
+            left: 0,
+            background: 'white',
+            boxShadow: '0 8px 32px rgba(15,23,42,0.15)',
+            border: '1px solid #E2E8F0',
+          }}
+        >
+          <DayPicker
+            mode="single"
+            selected={selected}
+            onSelect={(day) => {
+              onChange(day ? toISO(day) : '')
+              setOpen(false)
+            }}
+            disabled={disabledDays}
+            styles={{
+              root: { margin: 0, fontFamily: 'inherit', fontSize: 14 },
+            }}
+            classNames={{
+              today: 'rdp-today',
+              selected: 'rdp-selected',
+            }}
+          />
+        </div>
+      )}
+
+      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+    </div>
+  )
 }
 
 // ─── CitySearch combobox ──────────────────────────────────────────────────────
@@ -549,37 +660,25 @@ export default function CreateMoment({ userId, onComplete, onBack }: Props) {
               <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
                 Start Date
               </label>
-              <input
-                type="date"
+              <DatePicker
                 value={form.startDate}
-                onChange={e => handleStartDateChange(e.target.value)}
-                className={`w-full px-4 py-2.5 rounded-xl border text-sm text-text-main outline-none transition-colors
-                  ${errors.startDate
-                    ? 'border-red-400 bg-red-50'
-                    : 'border-slate-200 bg-slate-50 focus:border-primary focus:bg-white'}`}
+                onChange={handleStartDateChange}
+                placeholder="Pick a date"
+                error={errors.startDate}
               />
-              {errors.startDate && <p className="text-xs text-red-500 mt-1">{errors.startDate}</p>}
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
                 End Date
               </label>
-              <input
-                type="date"
+              <DatePicker
                 value={form.endDate}
-                min={form.startDate || undefined}
+                onChange={v => set('endDate', v)}
                 disabled={!form.startDate}
-                onChange={e => set('endDate', e.target.value)}
-                className={`w-full px-4 py-2.5 rounded-xl border text-sm outline-none transition-colors
-                  ${!form.startDate
-                    ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'
-                    : errors.endDate
-                      ? 'border-red-400 bg-red-50 text-text-main'
-                      : 'border-slate-200 bg-slate-50 text-text-main focus:border-primary focus:bg-white'}`}
+                disabledDays={form.startDate ? { before: toDate(form.startDate)! } : undefined}
+                placeholder="Pick a date"
+                error={errors.endDate}
               />
-              {errors.endDate && (
-                <p className="text-xs text-red-500 mt-1">{errors.endDate}</p>
-              )}
             </div>
           </div>
 
