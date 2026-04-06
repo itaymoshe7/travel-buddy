@@ -1,11 +1,22 @@
 import React from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 
 export type NavTab = 'explore' | 'my-moments' | 'chats' | 'profile'
 
-interface Props {
-  active:   NavTab
-  onChange: (tab: NavTab) => void
-  onAdd:    () => void
+// Map tab id → URL path
+const TAB_PATH: Record<NavTab, string> = {
+  'explore':    '/explore',
+  'my-moments': '/moments',
+  'chats':      '/chats',
+  'profile':    '/profile',
+}
+
+// Derive active tab from current pathname
+function activeTabFromPath(pathname: string): NavTab {
+  if (pathname.startsWith('/moments')) return 'my-moments'
+  if (pathname.startsWith('/chats'))   return 'chats'
+  if (pathname.startsWith('/profile')) return 'profile'
+  return 'explore'
 }
 
 // Left two tabs
@@ -80,13 +91,17 @@ function TabButton({ tab, active, onClick }: {
   )
 }
 
-export default function BottomNav({ active, onChange, onAdd }: Props) {
+export default function BottomNav() {
+  const { pathname } = useLocation()
+  const navigate     = useNavigate()
+  const active       = activeTabFromPath(pathname)
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40"
       style={{
-        background: 'rgba(255,255,255,0.88)',
+        background:   'rgba(255,255,255,0.88)',
         backdropFilter: 'blur(20px)',
-        boxShadow: '0 -1px 0 rgba(226,232,240,0.6), 0 -8px 24px rgba(15,23,42,0.04)',
+        boxShadow:    '0 -1px 0 rgba(226,232,240,0.6), 0 -8px 24px rgba(15,23,42,0.04)',
       }}>
 
       <div className="flex items-center max-w-lg mx-auto px-2" style={{ height: '64px' }}>
@@ -97,24 +112,23 @@ export default function BottomNav({ active, onChange, onAdd }: Props) {
             key={tab.id}
             tab={tab}
             active={active === tab.id}
-            onClick={() => onChange(tab.id)}
+            onClick={() => navigate(TAB_PATH[tab.id])}
           />
         ))}
 
-        {/* Central FAB slot — wider to give the popped circle room */}
+        {/* Central FAB */}
         <div className="relative flex items-center justify-center" style={{ width: '72px', flexShrink: 0 }}>
           <button
             type="button"
-            onClick={onAdd}
+            onClick={() => navigate('/create')}
             aria-label="Create a Moment"
             className="absolute flex items-center justify-center focus:outline-none transition-transform active:scale-95"
             style={{
-              width:     '56px',
-              height:    '56px',
+              width: '56px', height: '56px',
               borderRadius: '9999px',
               background:   'linear-gradient(135deg, #1D4ED8 0%, #0D9488 100%)',
               boxShadow:    '0 4px 24px rgba(13,148,136,0.40), 0 2px 8px rgba(29,78,216,0.25)',
-              bottom:       '12px',   // pops above the bar
+              bottom:       '12px',
             }}
           >
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24"
@@ -130,7 +144,7 @@ export default function BottomNav({ active, onChange, onAdd }: Props) {
             key={tab.id}
             tab={tab}
             active={active === tab.id}
-            onClick={() => onChange(tab.id)}
+            onClick={() => navigate(TAB_PATH[tab.id])}
           />
         ))}
 
