@@ -11,6 +11,7 @@ interface Profile {
   avatar_url:    string | null
   travel_region: string | null
   travel_vibe:   string | null
+  travel_tags:   string[] | null
   gender:        string | null
   age:           number | null
   created_at:    string | null
@@ -39,9 +40,18 @@ interface JoinedMoment {
 }
 
 interface Props {
-  userId:   string
-  onLogOut: () => void
+  userId:         string
+  onLogOut:       () => void
+  onSelectMoment: (id: string) => void
 }
+
+// ─── Travel tags ──────────────────────────────────────────────────────────────
+
+const ALL_TRAVEL_TAGS = [
+  'Backpacker', 'Luxury', 'Solo Traveler', 'Adventure', 'Foodie',
+  'Beach Lover', 'Party', 'Culture', 'Nature', 'Budget',
+  'Digital Nomad', 'City Breaks', 'Hiking', 'Photography', 'Road Trips',
+]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -106,7 +116,7 @@ function Section({ label, children }: { label: string; children: React.ReactNode
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function ProfileScreen({ userId, onLogOut }: Props) {
+export default function ProfileScreen({ userId, onLogOut, onSelectMoment }: Props) {
   const [profile,       setProfile]       = useState<Profile | null>(null)
   const [stats,         setStats]         = useState<Stats>({ joinedLabel: '—', created: 0, joined: 0 })
   const [recentMoments,  setRecentMoments]  = useState<RecentMoment[]>([])
@@ -119,7 +129,10 @@ export default function ProfileScreen({ userId, onLogOut }: Props) {
 
   // ── Three-dots menu ──────────────────────────────────────────────────────────
   const [menuOpen,        setMenuOpen]        = useState(false)
-  const [activeModal,     setActiveModal]     = useState<null | 'edit' | 'moments' | 'delete'>(null)
+  const [activeModal,     setActiveModal]     = useState<null | 'edit' | 'moments' | 'delete' | 'tags'>(null)
+  // Travel tags
+  const [pendingTags,     setPendingTags]     = useState<string[]>([])
+  const [savingTags,      setSavingTags]      = useState(false)
   // Edit profile
   const avatarInputRef    = useRef<HTMLInputElement>(null)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
@@ -137,7 +150,7 @@ export default function ProfileScreen({ userId, onLogOut }: Props) {
       const [profileRes, createdRes, joinedRes, momentsRes, joinedMomentsRes] = await Promise.all([
         supabase
           .from('profiles')
-          .select('full_name, email, social_link, bio, avatar_url, travel_region, travel_vibe, gender, age, created_at')
+          .select('full_name, email, social_link, bio, avatar_url, travel_region, travel_vibe, travel_tags, gender, age, created_at')
           .eq('id', userId)
           .single(),
 
@@ -449,12 +462,19 @@ export default function ProfileScreen({ userId, onLogOut }: Props) {
             <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1"
               style={{ scrollbarWidth: 'none' }}>
               {joinedMoments.map(m => (
-                <div key={m.id} className="shrink-0 w-36 rounded-2xl p-3 flex flex-col gap-2"
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => onSelectMoment(m.id)}
+                  className="shrink-0 w-36 rounded-2xl p-3 flex flex-col gap-2 text-left focus:outline-none transition-all active:scale-95"
                   style={{
                     background: 'linear-gradient(145deg,rgba(239,246,255,0.9),rgba(220,252,231,0.6))',
                     border: '1px solid rgba(134,239,172,0.35)',
                     boxShadow: '0 2px 8px rgba(15,23,42,0.06)',
-                  }}>
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(15,23,42,0.12)'; e.currentTarget.style.border = '1px solid rgba(134,239,172,0.65)' }}
+                  onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(15,23,42,0.06)'; e.currentTarget.style.border = '1px solid rgba(134,239,172,0.35)' }}
+                >
                   {/* Activity bubble */}
                   <div className="w-9 h-9 rounded-xl flex items-center justify-center text-base shrink-0"
                     style={{ background: 'white', boxShadow: '0 1px 4px rgba(15,23,42,0.08)' }}>
@@ -474,7 +494,7 @@ export default function ProfileScreen({ userId, onLogOut }: Props) {
                       </p>
                     )}
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           )}
@@ -498,11 +518,26 @@ export default function ProfileScreen({ userId, onLogOut }: Props) {
               )}
             </div>
           )}
-          <button type="button"
-            className="w-full py-2.5 rounded-full text-sm font-semibold"
+          {/* Selected travel tags */}
+          {(profile.travel_tags ?? []).length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-3">
+              {(profile.travel_tags ?? []).map(tag => (
+                <span key={tag} className="px-3 py-1 rounded-full text-xs font-semibold"
+                  style={{ background: '#F0FDF4', color: '#15803D', border: '1px solid rgba(134,239,172,0.5)' }}>
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+          <button
+            type="button"
+            className="w-full py-2.5 rounded-full text-sm font-semibold transition-colors focus:outline-none"
             style={{ background: '#F1F5F9', color: '#64748B' }}
-            onClick={() => {}}>
-            + Add travel tags
+            onMouseEnter={e => (e.currentTarget.style.background = '#E2E8F0')}
+            onMouseLeave={e => (e.currentTarget.style.background = '#F1F5F9')}
+            onClick={() => { setPendingTags(profile.travel_tags ?? []); setActiveModal('tags') }}
+          >
+            {(profile.travel_tags ?? []).length > 0 ? 'Edit travel tags' : '+ Add travel tags'}
           </button>
         </Section>
 
@@ -534,9 +569,15 @@ export default function ProfileScreen({ userId, onLogOut }: Props) {
           ) : (
             <div className="space-y-2">
               {recentMoments.map(m => (
-                <div key={m.id}
-                  className="flex items-center gap-3 rounded-xl px-3 py-2.5"
-                  style={{ background: 'linear-gradient(145deg,rgba(253,242,248,0.7),rgba(239,246,255,0.7))', border: '1px solid rgba(226,232,240,0.6)' }}>
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => onSelectMoment(m.id)}
+                  className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left focus:outline-none transition-all active:scale-[0.98]"
+                  style={{ background: 'linear-gradient(145deg,rgba(253,242,248,0.7),rgba(239,246,255,0.7))', border: '1px solid rgba(226,232,240,0.6)' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'linear-gradient(145deg,rgba(253,242,248,1),rgba(239,246,255,1))'; e.currentTarget.style.border = '1px solid rgba(226,232,240,1)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'linear-gradient(145deg,rgba(253,242,248,0.7),rgba(239,246,255,0.7))'; e.currentTarget.style.border = '1px solid rgba(226,232,240,0.6)' }}
+                >
                   {/* Activity bubble */}
                   <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-base"
                     style={{ background: 'white', boxShadow: '0 1px 4px rgba(15,23,42,0.08)' }}>
@@ -554,7 +595,11 @@ export default function ProfileScreen({ userId, onLogOut }: Props) {
                       )}
                     </p>
                   </div>
-                </div>
+                  {/* Chevron */}
+                  <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} style={{ color: '#CBD5E1' }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
               ))}
             </div>
           )}
@@ -750,6 +795,87 @@ export default function ProfileScreen({ userId, onLogOut }: Props) {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Travel Tags Modal ───────────────────────────────────────────────── */}
+      {activeModal === 'tags' && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center"
+          style={{ background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(4px)' }}
+          onClick={() => setActiveModal(null)}
+        >
+          <div
+            className="w-full max-w-lg rounded-t-3xl px-6 pt-6 pb-12"
+            style={{ background: 'white' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: '#E2E8F0' }} />
+
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-bold" style={{ color: '#0F172A' }}>Travel Tags</h2>
+              <button
+                type="button"
+                onClick={() => setActiveModal(null)}
+                className="w-8 h-8 rounded-full flex items-center justify-center focus:outline-none"
+                style={{ background: '#F1F5F9', color: '#64748B' }}
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <p className="text-sm mb-4" style={{ color: '#64748B' }}>
+              Pick the tags that describe your travel style.
+            </p>
+
+            <div className="flex flex-wrap gap-2 mb-6">
+              {ALL_TRAVEL_TAGS.map(tag => {
+                const selected = pendingTags.includes(tag)
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() =>
+                      setPendingTags(prev =>
+                        prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+                      )
+                    }
+                    className="px-3.5 py-1.5 rounded-full text-sm font-semibold transition-all focus:outline-none"
+                    style={{
+                      background: selected ? '#15803D' : '#F1F5F9',
+                      color:      selected ? 'white'   : '#475569',
+                      border:     selected ? '1px solid #15803D' : '1px solid #E2E8F0',
+                    }}
+                  >
+                    {tag}
+                  </button>
+                )
+              })}
+            </div>
+
+            <button
+              type="button"
+              disabled={savingTags}
+              onClick={async () => {
+                setSavingTags(true)
+                const { error } = await supabase
+                  .from('profiles')
+                  .update({ travel_tags: pendingTags })
+                  .eq('id', userId)
+                setSavingTags(false)
+                if (!error) {
+                  setProfile(prev => prev ? { ...prev, travel_tags: pendingTags } : prev)
+                  setActiveModal(null)
+                }
+              }}
+              className="w-full py-3.5 rounded-full text-sm font-bold transition-all focus:outline-none"
+              style={{ background: '#1D4ED8', color: 'white', opacity: savingTags ? 0.6 : 1 }}
+            >
+              {savingTags ? 'Saving…' : 'Save Tags'}
+            </button>
           </div>
         </div>
       )}

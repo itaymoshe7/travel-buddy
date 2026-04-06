@@ -240,6 +240,7 @@ export default function App() {
         <ProfileScreen
           userId={userId!}
           onLogOut={() => { supabase.auth.signOut() }}
+          onSelectMoment={id => { setSelectedMomentId(id); setMomentDetailOrigin('profile'); setPage('moment-detail') }}
         />
       )}
 
