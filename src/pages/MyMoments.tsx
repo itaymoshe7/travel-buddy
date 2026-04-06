@@ -22,6 +22,7 @@ interface Props {
   userId:         string
   onOpenChat:     (chatId: string, name: string) => void
   onSelectMoment: (id: string) => void
+  onEditMoment:   (id: string) => void
 }
 
 type Tab = 'posts' | 'joined'
@@ -84,11 +85,13 @@ function MomentItem({
   moment,
   onOpenChat,
   onDelete,
+  onEdit,
   onSelect,
 }: {
   moment:      MomentCard
   onOpenChat?: (chatId: string, name: string) => void
   onDelete?:   () => void
+  onEdit?:     () => void
   onSelect:    () => void
 }) {
   const [chatting, setChatting] = useState(false)
@@ -151,6 +154,19 @@ function MomentItem({
               {chatting ? '…' : 'Chat'}
             </button>
           )}
+          {onEdit && (
+            <button
+              type="button"
+              onClick={e => { e.stopPropagation(); onEdit() }}
+              className="w-7 h-7 rounded-lg flex items-center justify-center focus:outline-none"
+              style={{ background: 'rgba(255,255,255,0.18)', color: 'white', backdropFilter: 'blur(8px)' }}
+              aria-label="Edit moment"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 0l.172.172a2 2 0 010 2.828L12 16H9v-3z" />
+              </svg>
+            </button>
+          )}
           {onDelete && (
             <button
               type="button"
@@ -174,11 +190,6 @@ function MomentItem({
                 <span style={{ color: '#FFFFFF' }}>📍 {moment.destination}</span>
                 {dateStr && <span style={{ color: 'rgba(255,255,255,0.75)' }}> · {dateStr}</span>}
               </p>
-              {moment.description && (
-                <p className="text-xs mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.85)', textShadow: '0 1px 3px rgba(0,0,0,0.50)' }}>
-                  {moment.description}
-                </p>
-              )}
           </div>
           {moment.status && (
             <div className="mt-2">
@@ -232,6 +243,19 @@ function MomentItem({
                 {chatting ? '…' : 'Chat'}
               </button>
             )}
+            {onEdit && (
+              <button
+                type="button"
+                onClick={e => { e.stopPropagation(); onEdit() }}
+                className="w-7 h-7 rounded-lg flex items-center justify-center focus:outline-none transition-colors"
+                style={{ background: 'rgba(29,78,216,0.08)', color: '#1D4ED8' }}
+                aria-label="Edit moment"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 0l.172.172a2 2 0 010 2.828L12 16H9v-3z" />
+                </svg>
+              </button>
+            )}
             {onDelete && (
               <button
                 type="button"
@@ -245,7 +269,7 @@ function MomentItem({
                 </svg>
               </button>
             )}
-            {!showChat && !onDelete && (
+            {!showChat && !onEdit && !onDelete && (
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                 strokeWidth={2} style={{ color: '#CBD5E1' }}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -266,7 +290,7 @@ function MomentItem({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function MyMoments({ userId, onOpenChat, onSelectMoment }: Props) {
+export default function MyMoments({ userId, onOpenChat, onSelectMoment, onEditMoment }: Props) {
   const [activeTab,     setActiveTab]     = useState<Tab>('posts')
   const [myPosts,       setMyPosts]       = useState<MomentCard[]>([])
   const [joinedMoments, setJoinedMoments] = useState<MomentCard[]>([])
@@ -442,6 +466,7 @@ export default function MyMoments({ userId, onOpenChat, onSelectMoment }: Props)
                 key={m.id}
                 moment={m}
                 onOpenChat={activeTab === 'joined' ? onOpenChat : undefined}
+                onEdit={activeTab === 'posts' ? () => onEditMoment(m.id) : undefined}
                 onDelete={activeTab === 'posts' && deletingId !== m.id
                   ? () => handleDelete(m.id)
                   : undefined}

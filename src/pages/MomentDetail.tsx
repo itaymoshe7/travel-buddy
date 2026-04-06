@@ -327,7 +327,6 @@ export default function MomentDetail({ momentId, userId, onBack, onOpenChat, onV
           {moment.description && (
             <div className="rounded-xl px-4 py-3 mb-4"
               style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-              <p className="text-xs font-semibold uppercase tracking-widest mb-1.5" style={{ color: '#94A3B8' }}>About this moment</p>
               <p className="text-sm leading-relaxed" style={{ color: '#334155' }}>{moment.description}</p>
             </div>
           )}

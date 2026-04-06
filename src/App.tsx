@@ -26,6 +26,7 @@ import NotificationsPage  from './pages/NotificationsPage'
 import MomentDetail       from './pages/MomentDetail'
 import PublicProfile      from './pages/PublicProfile'
 import ResetPassword      from './pages/ResetPassword'
+import EditMoment         from './pages/EditMoment'
 import BottomNav          from './components/BottomNav'
 
 // ─── Auth gate ────────────────────────────────────────────────────────────────
@@ -90,6 +91,19 @@ function ChatRoomRoute({ userId }: { userId: string }) {
       chatId={chatId!}
       userId={userId}
       otherUserName={partnerName}
+      onBack={() => navigate(-1)}
+    />
+  )
+}
+
+function EditMomentRoute({ userId }: { userId: string }) {
+  const { momentId } = useParams<{ momentId: string }>()
+  const navigate     = useNavigate()
+  return (
+    <EditMoment
+      momentId={momentId!}
+      userId={userId}
+      onComplete={() => navigate('/moments', { replace: true })}
       onBack={() => navigate(-1)}
     />
   )
@@ -202,6 +216,7 @@ function AppRoutes() {
               userId={uid}
               onOpenChat={(id, name) => navigate(`/chat/${id}`, { state: { partnerName: name } })}
               onSelectMoment={id => navigate(`/moment/${id}`)}
+              onEditMoment={id => navigate(`/edit/${id}`)}
             />
           } />
 
@@ -241,6 +256,7 @@ function AppRoutes() {
         } />
 
         <Route path="/moment/:momentId" element={<MomentDetailRoute userId={uid} />} />
+        <Route path="/edit/:momentId"   element={<EditMomentRoute   userId={uid} />} />
         <Route path="/chat/:chatId"     element={<ChatRoomRoute     userId={uid} />} />
         <Route path="/user/:userId"     element={<PublicProfileRoute />} />
 
