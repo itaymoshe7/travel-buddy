@@ -6,24 +6,52 @@ type Step = 'loading' | 'form' | 'success' | 'invalid'
 
 export default function ResetPassword() {
   const navigate = useNavigate()
-  const [step,      setStep]      = useState<Step>('loading')
-  const [password,  setPassword]  = useState('')
-  const [confirm,   setConfirm]   = useState('')
-  const [saving,    setSaving]    = useState(false)
-  const [error,     setError]     = useState<string | null>(null)
+  const [step,     setStep]     = useState<Step>('loading')
+  const [password, setPassword] = useState('')
+  const [confirm,  setConfirm]  = useState('')
+  const [saving,   setSaving]   = useState(false)
+  const [error,    setError]    = useState<string | null>(null)
 
-  // Supabase redirects back with a recovery token in the URL hash.
-  // The JS SDK auto-exchanges it on load and fires onAuthStateChange with
-  // event='PASSWORD_RECOVERY'. We wait for that before showing the form.
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') setStep('form')
+    let settled = false
+
+    function showForm() {
+      if (settled) return
+      settled = true
+      setStep('form')
+    }
+
+    function showInvalid() {
+      if (settled) return
+      settled = true
+      setStep('invalid')
+    }
+
+    // ── Path 1: Implicit flow ────────────────────────────────────────────────
+    // Supabase parses the URL hash (#access_token=...&type=recovery) when the
+    // JS client initialises — before React even renders. By the time this
+    // useEffect runs the recovery session is already set, so getSession()
+    // returns it immediately and we never miss the event.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) showForm()
     })
-    // Timeout: if the token exchange never fires, the link was invalid/expired
-    const timer = setTimeout(() => {
-      setStep(prev => prev === 'loading' ? 'invalid' : prev)
-    }, 4000)
-    return () => { subscription.unsubscribe(); clearTimeout(timer) }
+
+    // ── Path 2: PKCE flow ────────────────────────────────────────────────────
+    // Newer Supabase projects use PKCE: the link contains ?code=... which the
+    // SDK exchanges for a session via a network request. That exchange finishes
+    // AFTER the component mounts, so we catch it here via the event listener.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') showForm()
+    })
+
+    // ── Safety net ───────────────────────────────────────────────────────────
+    // If neither path resolves within 8 s the link is genuinely expired/invalid.
+    const timer = setTimeout(showInvalid, 8000)
+
+    return () => {
+      subscription.unsubscribe()
+      clearTimeout(timer)
+    }
   }, [])
 
   async function handleSubmit() {
@@ -40,20 +68,25 @@ export default function ResetPassword() {
     const { error: err } = await supabase.auth.updateUser({ password })
     setSaving(false)
     if (err) { setError(err.message); return }
+    // Sign out the recovery session so the user logs in fresh
+    await supabase.auth.signOut()
     setStep('success')
   }
 
-  // ── Loading (waiting for token exchange) ───────────────────────────────────
+  // ── Loading ────────────────────────────────────────────────────────────────
   if (step === 'loading') {
     return (
-      <div className="min-h-screen bg-bg-base flex items-center justify-center">
+      <div className="min-h-screen bg-bg-base flex flex-col items-center justify-center gap-4">
         <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
           style={{ borderColor: '#1D4ED8', borderTopColor: 'transparent' }} />
+        <p className="text-sm font-medium" style={{ color: '#64748B' }}>
+          Verifying reset link…
+        </p>
       </div>
     )
   }
 
-  // ── Invalid / expired link ──────────────────────────────────────────────────
+  // ── Invalid / expired ──────────────────────────────────────────────────────
   if (step === 'invalid') {
     return (
       <div className="min-h-screen bg-bg-base flex items-center justify-center p-4">
@@ -61,7 +94,8 @@ export default function ResetPassword() {
           <div className="text-4xl mb-4">🔗</div>
           <h1 className="text-xl font-bold text-text-main mb-2">Link Expired</h1>
           <p className="text-sm text-slate-500 mb-6">
-            This password reset link is invalid or has expired. Please request a new one.
+            This password reset link is invalid or has already been used.
+            Please request a new one from the login screen.
           </p>
           <button
             type="button"
@@ -88,7 +122,7 @@ export default function ResetPassword() {
           </div>
           <h1 className="text-xl font-bold text-text-main mb-2">Password Updated</h1>
           <p className="text-sm text-slate-500 mb-6">
-            Your password has been changed successfully. You can now log in with your new password.
+            Your password has been changed. Log in with your new password to continue.
           </p>
           <button
             type="button"
