@@ -213,13 +213,10 @@ export default function MomentDetail({ momentId, userId, onBack, onOpenChat, onV
   const dateStr    = formatDateRange(moment.start_date, moment.end_date)
   const creator    = moment.profiles
 
-  // ── Request button ─────────────────────────────────────────────────────────
+  // ── Request button (only rendered for non-owners) ──────────────────────────
   let reqStyle: React.CSSProperties
   let reqLabel: string
-  if (isOwn) {
-    reqStyle = { background: '#F1F5F9', color: '#94A3B8', cursor: 'not-allowed' }
-    reqLabel = 'Your moment'
-  } else if (isAccepted) {
+  if (isAccepted) {
     reqStyle = { background: 'rgba(34,197,94,0.10)', color: '#16A34A', border: '1px solid rgba(34,197,94,0.25)', cursor: 'default' }
     reqLabel = '✓ Approved'
   } else if (isPending) {
@@ -236,7 +233,7 @@ export default function MomentDetail({ momentId, userId, onBack, onOpenChat, onV
     reqLabel = acting ? '…' : 'Send Request'
   }
 
-  const chatLabel = isAccepted ? 'Open Chat →' : isOwn ? 'Your moment' : 'Message creator'
+  const chatLabel = isAccepted ? 'Open Chat →' : 'Message creator'
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -353,29 +350,29 @@ export default function MomentDetail({ momentId, userId, onBack, onOpenChat, onV
           </div>
         </div>
 
-        {/* ── Action buttons ──────────────────────────────────────────────── */}
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={handleSendRequest}
-            disabled={acting || !!status || isOwn || isFull}
-            className="flex-1 py-3 rounded-xl text-sm font-bold uppercase tracking-wider focus:outline-none transition-all"
-            style={reqStyle}
-          >
-            {reqLabel}
-          </button>
-          <button
-            type="button"
-            onClick={handleChat}
-            disabled={acting || isOwn}
-            className="flex-1 py-3 rounded-xl text-sm font-bold uppercase tracking-wider focus:outline-none transition-all"
-            style={isOwn
-              ? { background: '#F1F5F9', color: '#94A3B8', cursor: 'not-allowed' }
-              : { background: 'rgba(29,78,216,0.10)', color: '#1D4ED8', cursor: 'pointer' }}
-          >
-            {acting ? '…' : chatLabel}
-          </button>
-        </div>
+        {/* ── Action buttons (only shown to non-owners) ───────────────────── */}
+        {!isOwn && (
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={handleSendRequest}
+              disabled={acting || !!status || isFull}
+              className="flex-1 py-3 rounded-xl text-sm font-bold uppercase tracking-wider focus:outline-none transition-all"
+              style={reqStyle}
+            >
+              {reqLabel}
+            </button>
+            <button
+              type="button"
+              onClick={handleChat}
+              disabled={acting}
+              className="flex-1 py-3 rounded-xl text-sm font-bold uppercase tracking-wider focus:outline-none transition-all"
+              style={{ background: 'rgba(29,78,216,0.10)', color: '#1D4ED8', cursor: 'pointer' }}
+            >
+              {acting ? '…' : chatLabel}
+            </button>
+          </div>
+        )}
 
         {/* ── Participants ────────────────────────────────────────────────── */}
         <div className="rounded-3xl p-5"
