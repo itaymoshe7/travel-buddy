@@ -23,21 +23,18 @@ interface Stats {
   joined:      number
 }
 
-interface RecentMoment {
+interface MomentCard {
   id:            string
   title:         string
   destination:   string
   activity_type: string
   start_date:    string | null
+  end_date:      string | null
+  image_url:     string | null
 }
 
-interface JoinedMoment {
-  id:            string
-  title:         string
-  destination:   string
-  activity_type: string
-  start_date:    string | null
-}
+type RecentMoment = MomentCard
+type JoinedMoment = MomentCard
 
 interface Props {
   userId:         string
@@ -84,6 +81,13 @@ function socialLabel(url: string | null) {
   }
 }
 
+function formatDateRange(start: string | null, end: string | null): string {
+  if (!start) return ''
+  const s = formatDate(start)
+  if (!end) return s
+  return `${s} – ${formatDate(end)}`
+}
+
 // ─── Stat Card ────────────────────────────────────────────────────────────────
 
 function StatCard({ value, label }: { value: string | number; label: string }) {
@@ -97,6 +101,54 @@ function StatCard({ value, label }: { value: string | number; label: string }) {
         {label}
       </span>
     </div>
+  )
+}
+
+// ─── Moment photo card ────────────────────────────────────────────────────────
+
+function MomentPhotoCard({ moment, onSelect }: { moment: MomentCard; onSelect: (id: string) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(moment.id)}
+      className="relative w-full rounded-2xl overflow-hidden focus:outline-none group active:scale-[0.97] transition-transform"
+      style={{ height: 148 }}
+    >
+      {/* Background: photo or gradient fallback */}
+      {moment.image_url ? (
+        <img
+          src={moment.image_url}
+          alt={moment.title}
+          className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+        />
+      ) : (
+        <div
+          className="absolute inset-0 flex items-center justify-center text-3xl"
+          style={{ background: 'linear-gradient(145deg,#1E3A5F,#0D9488)' }}
+        >
+          {ACTIVITY_EMOJI[moment.activity_type] ?? '📍'}
+        </div>
+      )}
+
+      {/* Bottom-up dark gradient */}
+      <div className="absolute inset-0 pointer-events-none"
+        style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.40) 50%, transparent 100%)' }} />
+      {/* Top vignette */}
+      <div className="absolute inset-0 pointer-events-none"
+        style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.22) 0%, transparent 40%)' }} />
+
+      {/* Text content */}
+      <div className="absolute bottom-0 left-0 right-0 p-3 text-left">
+        <p className="text-sm font-bold line-clamp-2 leading-snug"
+          style={{ color: '#FFFFFF', textShadow: '0 1px 4px rgba(0,0,0,0.55)' }}>
+          {moment.title}
+        </p>
+        <p className="text-[11px] mt-0.5 truncate"
+          style={{ color: 'rgba(255,255,255,0.78)', textShadow: '0 1px 3px rgba(0,0,0,0.45)' }}>
+          {formatDateRange(moment.start_date, moment.end_date) || moment.destination}
+        </p>
+      </div>
+    </button>
   )
 }
 
@@ -167,14 +219,14 @@ export default function ProfileScreen({ userId, onLogOut, onSelectMoment }: Prop
 
         supabase
           .from('moments')
-          .select('id, title, destination, activity_type, start_date')
+          .select('id, title, destination, activity_type, start_date, end_date, image_url')
           .eq('creator_id', userId)
           .order('created_at', { ascending: false })
-          .limit(3),
+          .limit(6),
 
         supabase
           .from('moment_requests')
-          .select('moments!moment_id(id, title, destination, activity_type, start_date)')
+          .select('moments!moment_id(id, title, destination, activity_type, start_date, end_date, image_url)')
           .eq('user_id', userId)
           .eq('status', 'accepted')
           .order('created_at', { ascending: false })
@@ -459,42 +511,9 @@ export default function ProfileScreen({ userId, onLogOut, onSelectMoment }: Prop
               No approved journeys yet — start exploring!
             </p>
           ) : (
-            <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1"
-              style={{ scrollbarWidth: 'none' }}>
+            <div className="grid grid-cols-2 gap-3">
               {joinedMoments.map(m => (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => onSelectMoment(m.id)}
-                  className="shrink-0 w-36 rounded-2xl p-3 flex flex-col gap-2 text-left focus:outline-none transition-all active:scale-95"
-                  style={{
-                    background: 'linear-gradient(145deg,rgba(239,246,255,0.9),rgba(220,252,231,0.6))',
-                    border: '1px solid rgba(134,239,172,0.35)',
-                    boxShadow: '0 2px 8px rgba(15,23,42,0.06)',
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(15,23,42,0.12)'; e.currentTarget.style.border = '1px solid rgba(134,239,172,0.65)' }}
-                  onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(15,23,42,0.06)'; e.currentTarget.style.border = '1px solid rgba(134,239,172,0.35)' }}
-                >
-                  {/* Activity bubble */}
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center text-base shrink-0"
-                    style={{ background: 'white', boxShadow: '0 1px 4px rgba(15,23,42,0.08)' }}>
-                    {ACTIVITY_EMOJI[m.activity_type] ?? '📍'}
-                  </div>
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold leading-snug line-clamp-2" style={{ color: '#0F172A' }}>
-                      {m.title}
-                    </p>
-                    <p className="text-[11px] mt-1 truncate" style={{ color: '#64748B' }}>
-                      📍 {m.destination}
-                    </p>
-                    {m.start_date && (
-                      <p className="text-[11px] mt-0.5" style={{ color: '#94A3B8' }}>
-                        {formatDate(m.start_date)}
-                      </p>
-                    )}
-                  </div>
-                </button>
+                <MomentPhotoCard key={m.id} moment={m} onSelect={onSelectMoment} />
               ))}
             </div>
           )}
@@ -567,39 +586,9 @@ export default function ProfileScreen({ userId, onLogOut, onSelectMoment }: Prop
               No moments yet — tap + to create one.
             </p>
           ) : (
-            <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-3">
               {recentMoments.map(m => (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => onSelectMoment(m.id)}
-                  className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left focus:outline-none transition-all active:scale-[0.98]"
-                  style={{ background: 'linear-gradient(145deg,rgba(253,242,248,0.7),rgba(239,246,255,0.7))', border: '1px solid rgba(226,232,240,0.6)' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'linear-gradient(145deg,rgba(253,242,248,1),rgba(239,246,255,1))'; e.currentTarget.style.border = '1px solid rgba(226,232,240,1)' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'linear-gradient(145deg,rgba(253,242,248,0.7),rgba(239,246,255,0.7))'; e.currentTarget.style.border = '1px solid rgba(226,232,240,0.6)' }}
-                >
-                  {/* Activity bubble */}
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-base"
-                    style={{ background: 'white', boxShadow: '0 1px 4px rgba(15,23,42,0.08)' }}>
-                    {ACTIVITY_EMOJI[m.activity_type] ?? '📍'}
-                  </div>
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate" style={{ color: '#0F172A' }}>
-                      {m.title}
-                    </p>
-                    <p className="text-xs truncate" style={{ color: '#64748B' }}>
-                      📍 {m.destination}
-                      {m.start_date && (
-                        <span style={{ color: '#94A3B8' }}> · {formatDate(m.start_date)}</span>
-                      )}
-                    </p>
-                  </div>
-                  {/* Chevron */}
-                  <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} style={{ color: '#CBD5E1' }}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
+                <MomentPhotoCard key={m.id} moment={m} onSelect={onSelectMoment} />
               ))}
             </div>
           )}
