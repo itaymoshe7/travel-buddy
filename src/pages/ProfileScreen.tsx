@@ -104,50 +104,51 @@ function StatCard({ value, label }: { value: string | number; label: string }) {
   )
 }
 
-// ─── Moment photo card ────────────────────────────────────────────────────────
+// ─── Moment list row ──────────────────────────────────────────────────────────
 
-function MomentPhotoCard({ moment, onSelect }: { moment: MomentCard; onSelect: (id: string) => void }) {
+function MomentListRow({ moment, onSelect }: { moment: MomentCard; onSelect: (id: string) => void }) {
   return (
     <button
       type="button"
       onClick={() => onSelect(moment.id)}
-      className="relative w-full rounded-2xl overflow-hidden focus:outline-none group active:scale-[0.97] transition-transform"
-      style={{ height: 148 }}
+      className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left focus:outline-none transition-colors active:scale-[0.98]"
+      style={{ background: 'linear-gradient(145deg,rgba(253,242,248,0.7),rgba(239,246,255,0.7))', border: '1px solid rgba(226,232,240,0.6)' }}
+      onMouseEnter={e => { e.currentTarget.style.background = 'linear-gradient(145deg,rgba(253,242,248,1),rgba(239,246,255,1))'; e.currentTarget.style.border = '1px solid rgba(226,232,240,1)' }}
+      onMouseLeave={e => { e.currentTarget.style.background = 'linear-gradient(145deg,rgba(253,242,248,0.7),rgba(239,246,255,0.7))'; e.currentTarget.style.border = '1px solid rgba(226,232,240,0.6)' }}
     >
-      {/* Background: photo or gradient fallback */}
-      {moment.image_url ? (
-        <img
-          src={moment.image_url}
-          alt={moment.title}
-          className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-        />
-      ) : (
-        <div
-          className="absolute inset-0 flex items-center justify-center text-3xl"
-          style={{ background: 'linear-gradient(145deg,#1E3A5F,#0D9488)' }}
-        >
-          {ACTIVITY_EMOJI[moment.activity_type] ?? '📍'}
-        </div>
-      )}
+      {/* Thumbnail: moment image or gradient fallback */}
+      <div className="w-10 h-10 rounded-xl shrink-0 overflow-hidden"
+        style={{ boxShadow: '0 1px 4px rgba(15,23,42,0.10)' }}>
+        {moment.image_url ? (
+          <img src={moment.image_url} alt={moment.title} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-base"
+            style={{ background: 'linear-gradient(135deg,#1E3A5F,#0D9488)' }}>
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </div>
+        )}
+      </div>
 
-      {/* Bottom-up dark gradient */}
-      <div className="absolute inset-0 pointer-events-none"
-        style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.40) 50%, transparent 100%)' }} />
-      {/* Top vignette */}
-      <div className="absolute inset-0 pointer-events-none"
-        style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.22) 0%, transparent 40%)' }} />
-
-      {/* Text content */}
-      <div className="absolute bottom-0 left-0 right-0 p-3 text-left">
-        <p className="text-sm font-bold line-clamp-2 leading-snug"
-          style={{ color: '#FFFFFF', textShadow: '0 1px 4px rgba(0,0,0,0.55)' }}>
+      {/* Info */}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold truncate" style={{ color: '#0F172A' }}>
           {moment.title}
         </p>
-        <p className="text-[11px] mt-0.5 truncate"
-          style={{ color: 'rgba(255,255,255,0.78)', textShadow: '0 1px 3px rgba(0,0,0,0.45)' }}>
-          {formatDateRange(moment.start_date, moment.end_date) || moment.destination}
+        <p className="text-xs truncate" style={{ color: '#64748B' }}>
+          📍 {moment.destination}
+          {moment.start_date && (
+            <span style={{ color: '#94A3B8' }}> · {formatDateRange(moment.start_date, moment.end_date)}</span>
+          )}
         </p>
       </div>
+
+      {/* Chevron */}
+      <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} style={{ color: '#CBD5E1' }}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+      </svg>
     </button>
   )
 }
@@ -511,9 +512,9 @@ export default function ProfileScreen({ userId, onLogOut, onSelectMoment }: Prop
               No approved journeys yet — start exploring!
             </p>
           ) : (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
               {joinedMoments.map(m => (
-                <MomentPhotoCard key={m.id} moment={m} onSelect={onSelectMoment} />
+                <MomentListRow key={m.id} moment={m} onSelect={onSelectMoment} />
               ))}
             </div>
           )}
@@ -586,9 +587,9 @@ export default function ProfileScreen({ userId, onLogOut, onSelectMoment }: Prop
               No moments yet — tap + to create one.
             </p>
           ) : (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
               {recentMoments.map(m => (
-                <MomentPhotoCard key={m.id} moment={m} onSelect={onSelectMoment} />
+                <MomentListRow key={m.id} moment={m} onSelect={onSelectMoment} />
               ))}
             </div>
           )}
