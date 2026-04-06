@@ -140,7 +140,7 @@ export default function ChatList({ userId, onOpenChat }: Props) {
         </p>
         <h1 className="text-[26px] font-bold leading-tight"
           style={{ color: '#0F172A', letterSpacing: '-0.02em' }}>
-          Chats 💬
+          Chats
         </h1>
       </div>
 

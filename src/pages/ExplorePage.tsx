@@ -398,17 +398,11 @@ function MomentCard({
             </div>
           </div>
 
-          {/* Bottom: title, description, details, participants, time */}
+          {/* Bottom: title, details, participants, time */}
           <div>
-            <h2 className="text-xl font-bold leading-snug mb-1.5" style={{ color: '#FFFFFF', textShadow: '0 2px 8px rgba(0,0,0,0.70)' }}>
+            <h2 className="text-xl font-bold leading-snug mb-2.5" style={{ color: '#FFFFFF', textShadow: '0 2px 8px rgba(0,0,0,0.70)' }}>
               {moment.title}
             </h2>
-
-            {moment.description && (
-              <p className="text-sm mb-3 line-clamp-2" style={{ color: '#FFFFFF', textShadow: '0 1px 4px rgba(0,0,0,0.55)' }}>
-                {moment.description}
-              </p>
-            )}
 
             {/* Details: destination · dates · spots */}
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3 text-xs font-medium" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.60)' }}>
