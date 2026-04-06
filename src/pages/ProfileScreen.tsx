@@ -1,5 +1,32 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import Cropper from 'react-easy-crop'
+import type { Area } from 'react-easy-crop'
 import { supabase } from '../lib/supabase'
+
+// ─── Canvas crop helper ────────────────────────────────────────────────────────
+
+async function getCroppedBlob(imageSrc: string, pixelCrop: Area): Promise<Blob> {
+  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image()
+    img.addEventListener('load', () => resolve(img))
+    img.addEventListener('error', reject)
+    img.src = imageSrc
+  })
+  const canvas  = document.createElement('canvas')
+  const size    = Math.min(pixelCrop.width, pixelCrop.height)  // always square
+  canvas.width  = size
+  canvas.height = size
+  const ctx = canvas.getContext('2d')!
+  ctx.drawImage(
+    image,
+    pixelCrop.x, pixelCrop.y,
+    pixelCrop.width, pixelCrop.height,
+    0, 0, size, size,
+  )
+  return new Promise<Blob>((resolve, reject) =>
+    canvas.toBlob(b => b ? resolve(b) : reject(new Error('canvas toBlob failed')), 'image/jpeg', 0.92),
+  )
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -191,6 +218,11 @@ export default function ProfileScreen({ userId, onLogOut, onSelectMoment }: Prop
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [editBio,         setEditBio]         = useState('')
   const [savingEdit,      setSavingEdit]       = useState(false)
+  // Crop
+  const [cropSrc,         setCropSrc]         = useState<string | null>(null)
+  const [crop,            setCrop]            = useState({ x: 0, y: 0 })
+  const [zoom,            setZoom]            = useState(1)
+  const [croppedArea,     setCroppedArea]     = useState<Area | null>(null)
   // Manage moments
   const [allMoments,      setAllMoments]      = useState<RecentMoment[]>([])
   const [loadingMoments,  setLoadingMoments]  = useState(false)
@@ -278,20 +310,42 @@ export default function ProfileScreen({ userId, onLogOut, onSelectMoment }: Prop
     onLogOut()
   }
 
-  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+    // Reset file input so selecting the same file again still fires onChange
+    e.target.value = ''
+    const reader = new FileReader()
+    reader.onload = () => {
+      setCrop({ x: 0, y: 0 })
+      setZoom(1)
+      setCroppedArea(null)
+      setCropSrc(reader.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleCropComplete = useCallback((_: Area, pixels: Area) => {
+    setCroppedArea(pixels)
+  }, [])
+
+  async function handleCropDone() {
+    if (!cropSrc || !croppedArea) return
     setUploadingAvatar(true)
-    const ext  = file.name.split('.').pop() ?? 'jpg'
-    const path = `avatars/${userId}.${ext}`
-    const { error: uploadError } = await supabase.storage
-      .from('moment-images')
-      .upload(path, file, { upsert: true })
-    if (uploadError) { setUploadingAvatar(false); return }
-    const { data: { publicUrl } } = supabase.storage.from('moment-images').getPublicUrl(path)
-    await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', userId)
-    setProfile(prev => prev ? { ...prev, avatar_url: publicUrl } : prev)
-    setUploadingAvatar(false)
+    setCropSrc(null)
+    try {
+      const blob = await getCroppedBlob(cropSrc, croppedArea)
+      const path = `avatars/${userId}.jpg`
+      const { error: uploadError } = await supabase.storage
+        .from('moment-images')
+        .upload(path, blob, { upsert: true, contentType: 'image/jpeg' })
+      if (uploadError) return
+      const { data: { publicUrl } } = supabase.storage.from('moment-images').getPublicUrl(path)
+      await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', userId)
+      setProfile(prev => prev ? { ...prev, avatar_url: publicUrl } : prev)
+    } finally {
+      setUploadingAvatar(false)
+    }
   }
 
   async function handleSaveEdit() {
@@ -607,6 +661,74 @@ export default function ProfileScreen({ userId, onLogOut, onSelectMoment }: Prop
         </button>
 
       </div>
+
+      {/* ── Avatar crop overlay ─────────────────────────────────────────────── */}
+      {cropSrc && (
+        <div className="fixed inset-0 flex flex-col" style={{ zIndex: 60, background: '#000' }}>
+
+          {/* Top bar */}
+          <div className="flex items-center justify-between px-5 py-4 shrink-0"
+            style={{ background: 'rgba(0,0,0,0.7)' }}>
+            <button
+              type="button"
+              onClick={() => setCropSrc(null)}
+              className="text-sm font-semibold focus:outline-none"
+              style={{ color: 'rgba(255,255,255,0.75)' }}
+            >
+              Cancel
+            </button>
+            <span className="text-sm font-semibold" style={{ color: 'white' }}>
+              Move and Scale
+            </span>
+            <button
+              type="button"
+              onClick={handleCropDone}
+              className="text-sm font-bold focus:outline-none"
+              style={{ color: '#38BDF8' }}
+            >
+              Done
+            </button>
+          </div>
+
+          {/* Cropper area */}
+          <div className="relative flex-1">
+            <Cropper
+              image={cropSrc}
+              crop={crop}
+              zoom={zoom}
+              aspect={1}
+              cropShape="round"
+              showGrid={false}
+              onCropChange={setCrop}
+              onZoomChange={setZoom}
+              onCropComplete={handleCropComplete}
+              style={{
+                containerStyle: { background: '#000' },
+                cropAreaStyle:  { border: '2px solid rgba(255,255,255,0.85)', boxShadow: '0 0 0 9999px rgba(0,0,0,0.62)' },
+              }}
+            />
+          </div>
+
+          {/* Zoom slider */}
+          <div className="flex items-center gap-4 px-8 py-5 shrink-0"
+            style={{ background: 'rgba(0,0,0,0.7)' }}>
+            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/>
+            </svg>
+            <input
+              type="range"
+              min={1} max={3} step={0.01}
+              value={zoom}
+              onChange={e => setZoom(Number(e.target.value))}
+              className="flex-1 accent-sky-400"
+            />
+            <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0zM11 8v6M8 11h6"/>
+            </svg>
+          </div>
+
+        </div>
+      )}
 
       {/* ── Edit Profile Modal ──────────────────────────────────────────────── */}
       {activeModal === 'edit' && (
