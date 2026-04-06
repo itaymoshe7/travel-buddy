@@ -424,7 +424,7 @@ function CitySearch({
 
 const ACTIVITY_TYPES = [
   { id: 'landing',   label: 'Landing',   emoji: '✈️' },
-  { id: 'stay',      label: 'Stay',      emoji: '🏨' },
+  { id: 'stay',      label: 'Stay',      emoji: '🏡' },
   { id: 'trip',      label: 'Trip',      emoji: '🥾' },
   { id: 'nightlife', label: 'Nightlife', emoji: '🍻' },
 ] as const

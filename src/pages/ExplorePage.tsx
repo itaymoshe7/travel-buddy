@@ -46,7 +46,7 @@ interface Props {
 
 const ACTIVITY_EMOJI: Record<string, string> = {
   landing:   '✈️',
-  stay:      '🏨',
+  stay:      '🏡',
   trip:      '🥾',
   nightlife: '🍻',
 }

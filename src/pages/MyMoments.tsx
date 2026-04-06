@@ -30,7 +30,7 @@ type Tab = 'posts' | 'joined'
 
 const ACTIVITY_EMOJI: Record<string, string> = {
   landing:   '✈️',
-  stay:      '🏨',
+  stay:      '🏡',
   trip:      '🥾',
   nightlife: '🍻',
 }

@@ -46,7 +46,7 @@ interface Props {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const ACTIVITY_EMOJI: Record<string, string> = {
-  landing: '✈️', stay: '🏨', trip: '🥾', nightlife: '🍻',
+  landing: '✈️', stay: '🏡', trip: '🥾', nightlife: '🍻',
 }
 
 function initials(name: string | null) {
