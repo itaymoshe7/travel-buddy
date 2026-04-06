@@ -25,6 +25,7 @@ import ChatRoom           from './pages/ChatRoom'
 import NotificationsPage  from './pages/NotificationsPage'
 import MomentDetail       from './pages/MomentDetail'
 import PublicProfile      from './pages/PublicProfile'
+import ResetPassword      from './pages/ResetPassword'
 import BottomNav          from './components/BottomNav'
 
 // ─── Auth gate ────────────────────────────────────────────────────────────────
@@ -154,6 +155,9 @@ function AppRoutes() {
           onBack={() => navigate('/welcome')}
         />
       } />
+
+      {/* Public — accessible without auth (Supabase embeds the token in the URL) */}
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       {/* ── Registration flow ───────────────────────────────────────────────── */}
 
