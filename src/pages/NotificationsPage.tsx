@@ -187,7 +187,7 @@ export default function NotificationsPage({ userId, onBack, onOpenChat }: Props)
 
         <h1 className="text-[26px] font-bold leading-tight"
           style={{ color: '#0F172A', letterSpacing: '-0.02em' }}>
-          Notifications 🔔
+          Notifications
         </h1>
       </div>
 

@@ -376,7 +376,7 @@ export default function MyMoments({ userId, onOpenChat, onSelectMoment }: Props)
         </p>
         <h1 className="text-[26px] font-bold leading-tight mb-4"
           style={{ color: '#0F172A', letterSpacing: '-0.02em' }}>
-          Moments 🗺️
+          Moments
         </h1>
 
         {/* Tabs */}

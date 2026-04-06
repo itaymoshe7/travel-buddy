@@ -298,7 +298,7 @@ export default function ProfileScreen({ userId, onLogOut }: Props) {
               My Account
             </p>
             <h1 className="text-[26px] font-bold leading-tight" style={{ color: '#0F172A', letterSpacing: '-0.02em' }}>
-              Profile 👤
+              Profile
             </h1>
           </div>
 
@@ -339,7 +339,7 @@ export default function ProfileScreen({ userId, onLogOut }: Props) {
                   onMouseEnter={e => (e.currentTarget.style.background = '#F8FAFC')}
                   onMouseLeave={e => (e.currentTarget.style.background = '')}
                 >
-                  ✏️ Edit Profile
+                  Edit Profile
                 </button>
                 <div style={{ height: '1px', background: '#F1F5F9' }} />
                 <button
@@ -350,7 +350,7 @@ export default function ProfileScreen({ userId, onLogOut }: Props) {
                   onMouseEnter={e => (e.currentTarget.style.background = '#F8FAFC')}
                   onMouseLeave={e => (e.currentTarget.style.background = '')}
                 >
-                  🗂️ Manage Moments
+                  Manage Moments
                 </button>
                 <div style={{ height: '1px', background: '#F1F5F9' }} />
                 <button
@@ -361,7 +361,7 @@ export default function ProfileScreen({ userId, onLogOut }: Props) {
                   onMouseEnter={e => (e.currentTarget.style.background = '#FEF2F2')}
                   onMouseLeave={e => (e.currentTarget.style.background = '')}
                 >
-                  🗑️ Delete Account
+                  Delete Account
                 </button>
               </div>
             )}
