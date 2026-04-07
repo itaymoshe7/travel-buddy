@@ -130,7 +130,7 @@ export default function ChatList({ userId, onOpenChat }: Props) {
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="pb-28" style={{ background: 'transparent' }}>
+    <div style={{ background: 'transparent' }}>
 
       {/* Header */}
       <div className="sticky top-0 z-10 px-5 pt-5 pb-3"
@@ -144,7 +144,7 @@ export default function ChatList({ userId, onOpenChat }: Props) {
         </h1>
       </div>
 
-      <div className="max-w-lg mx-auto px-4 pt-3 pb-28">
+      <div className="max-w-lg mx-auto px-4 pt-3">
 
         {/* Skeleton */}
         {loading && (

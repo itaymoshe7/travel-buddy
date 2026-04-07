@@ -867,7 +867,7 @@ export default function ExplorePage({ userId, onNotifications, onOpenChat, onSel
       </div>
 
       {/* ── Content ────────────────────────────────────────────────────────── */}
-      <div className="max-w-lg mx-auto px-4 pt-4 pb-28">
+      <div className="max-w-lg mx-auto px-4 pt-4">
 
         {loading && (
           <div className="flex flex-col gap-4">

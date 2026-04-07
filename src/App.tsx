@@ -42,7 +42,10 @@ function RequireAuth({ userId }: { userId: string | null }) {
 function TabLayout() {
   return (
     <>
-      <Outlet />
+      {/* Fixed-height scroll container — prevents document-level scrolling */}
+      <div style={{ height: '100svh', overflowY: 'auto', overflowX: 'hidden', paddingBottom: '64px' }}>
+        <Outlet />
+      </div>
       <BottomNav />
     </>
   )
