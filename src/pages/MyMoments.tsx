@@ -450,7 +450,7 @@ export default function MyMoments({ userId, onOpenChat, onSelectMoment, onEditMo
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen pb-28" style={{ background: 'transparent' }}>
+    <div className="pb-28" style={{ background: 'transparent' }}>
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="sticky top-0 z-10 px-5 pt-5 pb-0"

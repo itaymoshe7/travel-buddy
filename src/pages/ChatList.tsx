@@ -130,7 +130,7 @@ export default function ChatList({ userId, onOpenChat }: Props) {
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen" style={{ background: 'transparent' }}>
+    <div className="pb-28" style={{ background: 'transparent' }}>
 
       {/* Header */}
       <div className="sticky top-0 z-10 px-5 pt-5 pb-3"

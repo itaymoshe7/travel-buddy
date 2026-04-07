@@ -489,7 +489,7 @@ export default function ProfileScreen({ userId, onLogOut, onSelectMoment, onEdit
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen pb-28" style={{ background: 'transparent' }}>
+    <div className="pb-28" style={{ background: 'transparent' }}>
 
       {/* ── Top bar ──────────────────────────────────────────────────────── */}
       <div className="sticky top-0 z-20 px-5 pt-5 pb-3"

@@ -770,7 +770,7 @@ export default function ExplorePage({ userId, onNotifications, onOpenChat, onSel
   // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
-    <div className="relative min-h-screen" style={{ background: 'transparent' }}>
+    <div className="relative" style={{ background: 'transparent' }}>
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="sticky top-0 z-30 px-5 pt-5 pb-0"
