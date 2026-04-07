@@ -67,6 +67,7 @@ interface Props {
   userId:         string
   onLogOut:       () => void
   onSelectMoment: (id: string) => void
+  onEditMoment:   (id: string) => void
 }
 
 // ─── Travel tags ──────────────────────────────────────────────────────────────
@@ -133,23 +134,37 @@ function StatCard({ value, label }: { value: string | number; label: string }) {
 
 // ─── Moment list row ──────────────────────────────────────────────────────────
 
-function MomentListRow({ moment, onSelect }: { moment: MomentCard; onSelect: (id: string) => void }) {
+function MomentListRow({
+  moment,
+  onSelect,
+  onEdit,
+  onDelete,
+}: {
+  moment:    MomentCard
+  onSelect:  (id: string) => void
+  onEdit?:   () => void
+  onDelete?: () => void
+}) {
+  const [menuOpen, setMenuOpen] = useState(false)
+  const hasMenu = !!(onEdit || onDelete)
+
   return (
-    <button
-      type="button"
-      onClick={() => onSelect(moment.id)}
-      className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left focus:outline-none transition-colors active:scale-[0.98]"
+    <div
+      className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5"
       style={{ background: 'linear-gradient(145deg,rgba(253,242,248,0.7),rgba(239,246,255,0.7))', border: '1px solid rgba(226,232,240,0.6)' }}
       onMouseEnter={e => { e.currentTarget.style.background = 'linear-gradient(145deg,rgba(253,242,248,1),rgba(239,246,255,1))'; e.currentTarget.style.border = '1px solid rgba(226,232,240,1)' }}
       onMouseLeave={e => { e.currentTarget.style.background = 'linear-gradient(145deg,rgba(253,242,248,0.7),rgba(239,246,255,0.7))'; e.currentTarget.style.border = '1px solid rgba(226,232,240,0.6)' }}
     >
-      {/* Thumbnail: moment image or gradient fallback */}
-      <div className="w-10 h-10 rounded-xl shrink-0 overflow-hidden"
-        style={{ boxShadow: '0 1px 4px rgba(15,23,42,0.10)' }}>
+      {/* Thumbnail — click navigates to detail */}
+      <div
+        className="w-10 h-10 rounded-xl shrink-0 overflow-hidden cursor-pointer"
+        style={{ boxShadow: '0 1px 4px rgba(15,23,42,0.10)' }}
+        onClick={() => onSelect(moment.id)}
+      >
         {moment.image_url ? (
           <img src={moment.image_url} alt={moment.title} className="w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-base"
+          <div className="w-full h-full flex items-center justify-center"
             style={{ background: 'linear-gradient(135deg,#1E3A5F,#0D9488)' }}>
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth={1.8}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -159,8 +174,8 @@ function MomentListRow({ moment, onSelect }: { moment: MomentCard; onSelect: (id
         )}
       </div>
 
-      {/* Info */}
-      <div className="flex-1 min-w-0">
+      {/* Info — click navigates to detail */}
+      <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onSelect(moment.id)}>
         <p className="text-sm font-semibold truncate" style={{ color: '#0F172A' }}>
           {moment.title}
         </p>
@@ -172,11 +187,74 @@ function MomentListRow({ moment, onSelect }: { moment: MomentCard; onSelect: (id
         </p>
       </div>
 
-      {/* Chevron */}
-      <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} style={{ color: '#CBD5E1' }}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-      </svg>
-    </button>
+      {/* Right: 3-dot owner menu or chevron */}
+      {hasMenu ? (
+        <div
+          className="relative shrink-0"
+          tabIndex={-1}
+          onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setMenuOpen(false) }}
+        >
+          <button
+            type="button"
+            onClick={e => { e.stopPropagation(); setMenuOpen(v => !v) }}
+            className="w-8 h-8 rounded-full flex items-center justify-center focus:outline-none"
+            style={{ background: 'rgba(15,23,42,0.06)', color: '#64748B' }}
+            aria-label="Options"
+          >
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <circle cx="10" cy="4"  r="1.5" />
+              <circle cx="10" cy="10" r="1.5" />
+              <circle cx="10" cy="16" r="1.5" />
+            </svg>
+          </button>
+          {menuOpen && (
+            <div
+              className="absolute top-full right-0 mt-1.5 w-44 rounded-2xl overflow-hidden z-20"
+              style={{
+                background: 'rgba(15,23,42,0.88)',
+                backdropFilter: 'blur(16px)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.30)',
+              }}
+            >
+              {onEdit && (
+                <button
+                  type="button"
+                  onClick={e => { e.stopPropagation(); setMenuOpen(false); onEdit() }}
+                  className="w-full px-4 py-3 text-left text-sm font-medium text-white transition-colors focus:outline-none"
+                  style={{ background: 'transparent' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  Edit Moment
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  type="button"
+                  onClick={e => { e.stopPropagation(); setMenuOpen(false); onDelete() }}
+                  className="w-full px-4 py-3 text-left text-sm font-medium transition-colors focus:outline-none"
+                  style={{ background: 'transparent', borderTop: onEdit ? '1px solid rgba(255,255,255,0.10)' : 'none', color: '#FCA5A5' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  Delete Moment
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      ) : (
+        <svg
+          className="w-4 h-4 shrink-0 cursor-pointer"
+          fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+          style={{ color: '#CBD5E1' }}
+          onClick={() => onSelect(moment.id)}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+      )}
+    </div>
   )
 }
 
@@ -196,7 +274,7 @@ function Section({ label, children }: { label: string; children: React.ReactNode
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function ProfileScreen({ userId, onLogOut, onSelectMoment }: Props) {
+export default function ProfileScreen({ userId, onLogOut, onSelectMoment, onEditMoment }: Props) {
   const [profile,       setProfile]       = useState<Profile | null>(null)
   const [stats,         setStats]         = useState<Stats>({ joinedLabel: '—', created: 0, joined: 0 })
   const [recentMoments,  setRecentMoments]  = useState<RecentMoment[]>([])
@@ -373,6 +451,10 @@ export default function ProfileScreen({ userId, onLogOut, onSelectMoment }: Prop
   }
 
   async function handleDeleteMoment(id: string) {
+    const confirmed = window.confirm(
+      'Are you sure you want to delete this moment? This will also remove all join requests and the associated chat.'
+    )
+    if (!confirmed) return
     setDeletingId(id)
     await supabase.from('moments').delete().eq('id', id)
     setAllMoments(prev => prev.filter(m => m.id !== id))
@@ -643,7 +725,13 @@ export default function ProfileScreen({ userId, onLogOut, onSelectMoment }: Prop
           ) : (
             <div className="space-y-2">
               {recentMoments.map(m => (
-                <MomentListRow key={m.id} moment={m} onSelect={onSelectMoment} />
+                <MomentListRow
+                  key={m.id}
+                  moment={m}
+                  onSelect={onSelectMoment}
+                  onEdit={() => onEditMoment(m.id)}
+                  onDelete={() => handleDeleteMoment(m.id)}
+                />
               ))}
             </div>
           )}

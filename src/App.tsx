@@ -233,6 +233,7 @@ function AppRoutes() {
               userId={uid}
               onLogOut={async () => { await supabase.auth.signOut(); navigate('/welcome', { replace: true }) }}
               onSelectMoment={id => navigate(`/moment/${id}`)}
+              onEditMoment={id => navigate(`/edit/${id}`)}
             />
           } />
 
