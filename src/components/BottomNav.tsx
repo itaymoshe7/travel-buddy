@@ -1,26 +1,25 @@
 import React from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 
-export type NavTab = 'explore' | 'my-moments' | 'chats' | 'profile'
+export type NavTab = 'explore' | 'my-moments' | 'create' | 'chats' | 'profile'
 
-// Map tab id → URL path
 const TAB_PATH: Record<NavTab, string> = {
   'explore':    '/explore',
   'my-moments': '/moments',
+  'create':     '/create',
   'chats':      '/chats',
   'profile':    '/profile',
 }
 
-// Derive active tab from current pathname
 function activeTabFromPath(pathname: string): NavTab {
   if (pathname.startsWith('/moments')) return 'my-moments'
   if (pathname.startsWith('/chats'))   return 'chats'
   if (pathname.startsWith('/profile')) return 'profile'
+  if (pathname.startsWith('/create'))  return 'create'
   return 'explore'
 }
 
-// Left two tabs
-const LEFT_TABS: { id: NavTab; label: string; icon: (active: boolean) => React.ReactElement }[] = [
+const TABS: { id: NavTab; label: string; icon: (active: boolean) => React.ReactElement }[] = [
   {
     id: 'explore',
     label: 'Explore',
@@ -43,10 +42,28 @@ const LEFT_TABS: { id: NavTab; label: string; icon: (active: boolean) => React.R
       </svg>
     ),
   },
-]
-
-// Right two tabs
-const RIGHT_TABS: { id: NavTab; label: string; icon: (active: boolean) => React.ReactElement }[] = [
+  {
+    id: 'create',
+    label: 'Create',
+    icon: (a) => (
+      <div
+        style={{
+          width: '36px', height: '36px',
+          borderRadius: '9999px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: a
+            ? 'linear-gradient(135deg, #1D4ED8 0%, #0D9488 100%)'
+            : 'linear-gradient(135deg, rgba(29,78,216,0.12) 0%, rgba(13,148,136,0.12) 100%)',
+          transition: 'background 150ms ease',
+        }}
+      >
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24"
+          stroke={a ? 'white' : '#1D4ED8'} strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+        </svg>
+      </div>
+    ),
+  },
   {
     id: 'chats',
     label: 'Messages',
@@ -71,26 +88,6 @@ const RIGHT_TABS: { id: NavTab; label: string; icon: (active: boolean) => React.
   },
 ]
 
-function TabButton({ tab, active, onClick }: {
-  tab: { id: NavTab; label: string; icon: (a: boolean) => React.ReactElement }
-  active: boolean
-  onClick: () => void
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex-1 flex flex-col items-center gap-1 py-2 focus:outline-none transition-colors"
-    >
-      {tab.icon(active)}
-      <span className="text-[10px] font-semibold tracking-wide"
-        style={{ color: active ? '#1D4ED8' : '#94A3B8' }}>
-        {tab.label}
-      </span>
-    </button>
-  )
-}
-
 export default function BottomNav() {
   const { pathname } = useLocation()
   const navigate     = useNavigate()
@@ -99,55 +96,33 @@ export default function BottomNav() {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40"
       style={{
-        background:   'rgba(255,255,255,0.88)',
+        background:     'rgba(255,255,255,0.88)',
         backdropFilter: 'blur(20px)',
-        boxShadow:    '0 -1px 0 rgba(226,232,240,0.6), 0 -8px 24px rgba(15,23,42,0.04)',
+        boxShadow:      '0 -1px 0 rgba(226,232,240,0.6), 0 -8px 24px rgba(15,23,42,0.04)',
       }}>
 
-      <div className="flex items-center max-w-lg mx-auto px-2" style={{ height: '64px' }}>
-
-        {/* Left tabs */}
-        {LEFT_TABS.map(tab => (
-          <TabButton
-            key={tab.id}
-            tab={tab}
-            active={active === tab.id}
-            onClick={() => navigate(TAB_PATH[tab.id])}
-          />
-        ))}
-
-        {/* Central FAB */}
-        <div className="relative flex items-center justify-center" style={{ width: '72px', flexShrink: 0 }}>
-          <button
-            type="button"
-            onClick={() => navigate('/create')}
-            aria-label="Create a Moment"
-            className="absolute flex items-center justify-center focus:outline-none transition-transform active:scale-95"
-            style={{
-              width: '56px', height: '56px',
-              borderRadius: '9999px',
-              background:   'linear-gradient(135deg, #1D4ED8 0%, #0D9488 100%)',
-              boxShadow:    '0 4px 24px rgba(13,148,136,0.40), 0 2px 8px rgba(29,78,216,0.25)',
-              bottom:       '12px',
-            }}
-          >
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24"
-              stroke="white" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Right tabs */}
-        {RIGHT_TABS.map(tab => (
-          <TabButton
-            key={tab.id}
-            tab={tab}
-            active={active === tab.id}
-            onClick={() => navigate(TAB_PATH[tab.id])}
-          />
-        ))}
-
+      <div className="flex items-center max-w-lg mx-auto" style={{ height: '64px' }}>
+        {TABS.map(tab => {
+          const isActive = active === tab.id
+          const isCreate = tab.id === 'create'
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => navigate(TAB_PATH[tab.id])}
+              className="flex-1 flex flex-col items-center justify-center gap-0.5 focus:outline-none transition-colors"
+              style={{ height: '100%' }}
+            >
+              {tab.icon(isActive)}
+              <span
+                className="text-[10px] font-semibold tracking-wide"
+                style={{ color: isCreate ? (isActive ? '#1D4ED8' : '#0D9488') : (isActive ? '#1D4ED8' : '#94A3B8') }}
+              >
+                {tab.label}
+              </span>
+            </button>
+          )
+        })}
       </div>
     </nav>
   )
