@@ -208,6 +208,7 @@ function AppRoutes() {
               onNotifications={() => navigate('/notifications')}
               onOpenChat={(id, name) => navigate(`/chat/${id}`, { state: { partnerName: name } })}
               onSelectMoment={id => navigate(`/moment/${id}`)}
+              onEditMoment={id => navigate(`/edit/${id}`)}
             />
           } />
 

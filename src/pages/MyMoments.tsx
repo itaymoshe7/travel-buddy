@@ -94,7 +94,8 @@ function MomentItem({
   onEdit?:     () => void
   onSelect:    () => void
 }) {
-  const [chatting, setChatting] = useState(false)
+  const [chatting,  setChatting]  = useState(false)
+  const [menuOpen,  setMenuOpen]  = useState(false)
   const dateStr    = formatDateRange(moment.start_date, moment.end_date)
   const isApproved = moment.status === 'accepted'
   const isPending  = moment.status === 'pending'
@@ -154,31 +155,62 @@ function MomentItem({
               {chatting ? '…' : 'Chat'}
             </button>
           )}
-          {onEdit && (
-            <button
-              type="button"
-              onClick={e => { e.stopPropagation(); onEdit() }}
-              className="w-7 h-7 rounded-lg flex items-center justify-center focus:outline-none"
-              style={{ background: 'rgba(255,255,255,0.18)', color: 'white', backdropFilter: 'blur(8px)' }}
-              aria-label="Edit moment"
+          {(onEdit || onDelete) && (
+            <div
+              className="relative"
+              tabIndex={-1}
+              onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setMenuOpen(false) }}
             >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 0l.172.172a2 2 0 010 2.828L12 16H9v-3z" />
-              </svg>
-            </button>
-          )}
-          {onDelete && (
-            <button
-              type="button"
-              onClick={e => { e.stopPropagation(); onDelete() }}
-              className="w-7 h-7 rounded-lg flex items-center justify-center focus:outline-none"
-              style={{ background: 'rgba(255,255,255,0.18)', color: 'white', backdropFilter: 'blur(8px)' }}
-              aria-label="Delete moment"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-            </button>
+              <button
+                type="button"
+                onClick={e => { e.stopPropagation(); setMenuOpen(v => !v) }}
+                className="w-8 h-8 rounded-full flex items-center justify-center focus:outline-none"
+                style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)' }}
+                aria-label="Options"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#FFFFFF' }}>
+                  <circle cx="10" cy="4"  r="1.5" />
+                  <circle cx="10" cy="10" r="1.5" />
+                  <circle cx="10" cy="16" r="1.5" />
+                </svg>
+              </button>
+              {menuOpen && (
+                <div
+                  className="absolute top-full right-0 mt-1.5 w-44 rounded-2xl overflow-hidden z-20"
+                  style={{
+                    background: 'rgba(15,23,42,0.88)',
+                    backdropFilter: 'blur(16px)',
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.30)',
+                  }}
+                >
+                  {onEdit && (
+                    <button
+                      type="button"
+                      onClick={e => { e.stopPropagation(); setMenuOpen(false); onEdit() }}
+                      className="w-full px-4 py-3 text-left text-sm font-medium text-white transition-colors focus:outline-none"
+                      style={{ background: 'transparent' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      Edit Moment
+                    </button>
+                  )}
+                  {onDelete && (
+                    <button
+                      type="button"
+                      onClick={e => { e.stopPropagation(); setMenuOpen(false); onDelete() }}
+                      className="w-full px-4 py-3 text-left text-sm font-medium transition-colors focus:outline-none"
+                      style={{ background: 'transparent', borderTop: onEdit ? '1px solid rgba(255,255,255,0.10)' : 'none', color: '#FCA5A5' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      Delete Moment
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           )}
         </div>
 
@@ -243,33 +275,63 @@ function MomentItem({
                 {chatting ? '…' : 'Chat'}
               </button>
             )}
-            {onEdit && (
-              <button
-                type="button"
-                onClick={e => { e.stopPropagation(); onEdit() }}
-                className="w-7 h-7 rounded-lg flex items-center justify-center focus:outline-none transition-colors"
-                style={{ background: 'rgba(29,78,216,0.08)', color: '#1D4ED8' }}
-                aria-label="Edit moment"
+            {(onEdit || onDelete) ? (
+              <div
+                className="relative"
+                tabIndex={-1}
+                onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setMenuOpen(false) }}
               >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 0l.172.172a2 2 0 010 2.828L12 16H9v-3z" />
-                </svg>
-              </button>
-            )}
-            {onDelete && (
-              <button
-                type="button"
-                onClick={e => { e.stopPropagation(); onDelete() }}
-                className="w-7 h-7 rounded-lg flex items-center justify-center focus:outline-none transition-colors"
-                style={{ background: 'rgba(239,68,68,0.08)', color: '#EF4444' }}
-                aria-label="Delete moment"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
-            )}
-            {!showChat && !onEdit && !onDelete && (
+                <button
+                  type="button"
+                  onClick={e => { e.stopPropagation(); setMenuOpen(v => !v) }}
+                  className="w-8 h-8 rounded-full flex items-center justify-center focus:outline-none"
+                  style={{ background: 'rgba(15,23,42,0.06)', color: '#64748B' }}
+                  aria-label="Options"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <circle cx="10" cy="4"  r="1.5" />
+                    <circle cx="10" cy="10" r="1.5" />
+                    <circle cx="10" cy="16" r="1.5" />
+                  </svg>
+                </button>
+                {menuOpen && (
+                  <div
+                    className="absolute top-full right-0 mt-1.5 w-44 rounded-2xl overflow-hidden z-20"
+                    style={{
+                      background: 'rgba(15,23,42,0.88)',
+                      backdropFilter: 'blur(16px)',
+                      border: '1px solid rgba(255,255,255,0.12)',
+                      boxShadow: '0 8px 24px rgba(0,0,0,0.30)',
+                    }}
+                  >
+                    {onEdit && (
+                      <button
+                        type="button"
+                        onClick={e => { e.stopPropagation(); setMenuOpen(false); onEdit() }}
+                        className="w-full px-4 py-3 text-left text-sm font-medium text-white transition-colors focus:outline-none"
+                        style={{ background: 'transparent' }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                      >
+                        Edit Moment
+                      </button>
+                    )}
+                    {onDelete && (
+                      <button
+                        type="button"
+                        onClick={e => { e.stopPropagation(); setMenuOpen(false); onDelete() }}
+                        className="w-full px-4 py-3 text-left text-sm font-medium transition-colors focus:outline-none"
+                        style={{ background: 'transparent', borderTop: onEdit ? '1px solid rgba(255,255,255,0.10)' : 'none', color: '#FCA5A5' }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                      >
+                        Delete Moment
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : !showChat && (
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                 strokeWidth={2} style={{ color: '#CBD5E1' }}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />

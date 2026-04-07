@@ -40,6 +40,7 @@ interface Props {
   onNotifications: () => void
   onOpenChat:      (chatId: string, name: string) => void
   onSelectMoment:  (id: string) => void
+  onEditMoment:    (id: string) => void
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -238,6 +239,8 @@ function MomentCard({
   onToast,
   onOpenChat,
   onSelect,
+  onEdit,
+  onDelete,
 }: {
   moment:        MomentRow
   userId:        string
@@ -248,6 +251,8 @@ function MomentCard({
   onToast:       (msg: string, kind: 'success' | 'error') => void
   onOpenChat:    (chatId: string, name: string) => void
   onSelect:      () => void
+  onEdit?:       () => void
+  onDelete?:     () => void
 }) {
   const [requesting, setRequesting] = useState(false)
   const [chatting,   setChatting]   = useState(false)
@@ -341,61 +346,61 @@ function MomentCard({
               ) : null}
             </div>
 
-            {/* Three-dots menu */}
-            <div
-              className="relative shrink-0"
-              tabIndex={-1}
-              onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setMenuOpen(false) }}
-            >
-              <button
-                type="button"
-                onClick={e => { e.stopPropagation(); setMenuOpen(v => !v) }}
-                className="w-8 h-8 rounded-full flex items-center justify-center focus:outline-none"
-                style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)' }}
-                aria-label="Options"
+            {/* Three-dots menu — only for own moments */}
+            {isOwn && (
+              <div
+                className="relative shrink-0"
+                tabIndex={-1}
+                onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setMenuOpen(false) }}
               >
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#FFFFFF' }}>
-                  <circle cx="10" cy="4"  r="1.5" />
-                  <circle cx="10" cy="10" r="1.5" />
-                  <circle cx="10" cy="16" r="1.5" />
-                </svg>
-              </button>
-
-              {menuOpen && (
-                <div
-                  className="absolute top-full right-0 mt-1.5 w-44 rounded-2xl overflow-hidden z-20"
-                  style={{
-                    background: 'rgba(15,23,42,0.88)',
-                    backdropFilter: 'blur(16px)',
-                    border: '1px solid rgba(255,255,255,0.12)',
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.30)',
-                  }}
+                <button
+                  type="button"
+                  onClick={e => { e.stopPropagation(); setMenuOpen(v => !v) }}
+                  className="w-8 h-8 rounded-full flex items-center justify-center focus:outline-none"
+                  style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)' }}
+                  aria-label="Options"
                 >
-                  <button
-                    type="button"
-                    onClick={e => { e.stopPropagation(); setMenuOpen(false); onSelect() }}
-                    className="w-full px-4 py-3 text-left text-sm font-medium text-white transition-colors focus:outline-none"
-                    style={{ background: 'transparent' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#FFFFFF' }}>
+                    <circle cx="10" cy="4"  r="1.5" />
+                    <circle cx="10" cy="10" r="1.5" />
+                    <circle cx="10" cy="16" r="1.5" />
+                  </svg>
+                </button>
+
+                {menuOpen && (
+                  <div
+                    className="absolute top-full right-0 mt-1.5 w-44 rounded-2xl overflow-hidden z-20"
+                    style={{
+                      background: 'rgba(15,23,42,0.88)',
+                      backdropFilter: 'blur(16px)',
+                      border: '1px solid rgba(255,255,255,0.12)',
+                      boxShadow: '0 8px 24px rgba(0,0,0,0.30)',
+                    }}
                   >
-                    View Details
-                  </button>
-                  {isOwn && (
                     <button
                       type="button"
-                      onClick={e => { e.stopPropagation(); setMenuOpen(false); onSelect() }}
+                      onClick={e => { e.stopPropagation(); setMenuOpen(false); onEdit?.() }}
                       className="w-full px-4 py-3 text-left text-sm font-medium text-white transition-colors focus:outline-none"
-                      style={{ background: 'transparent', borderTop: '1px solid rgba(255,255,255,0.10)' }}
+                      style={{ background: 'transparent' }}
                       onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >
                       Edit Moment
                     </button>
-                  )}
-                </div>
-              )}
-            </div>
+                    <button
+                      type="button"
+                      onClick={e => { e.stopPropagation(); setMenuOpen(false); onDelete?.() }}
+                      className="w-full px-4 py-3 text-left text-sm font-medium transition-colors focus:outline-none"
+                      style={{ background: 'transparent', borderTop: '1px solid rgba(255,255,255,0.10)', color: '#FCA5A5' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      Delete Moment
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Bottom: title, details, participants, time */}
@@ -505,6 +510,59 @@ function MomentCard({
             <span className="text-xl leading-none" title={moment.activity_type}>
               {ACTIVITY_EMOJI[moment.activity_type] ?? '📍'}
             </span>
+            {isOwn && (
+              <div
+                className="relative shrink-0"
+                tabIndex={-1}
+                onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setMenuOpen(false) }}
+              >
+                <button
+                  type="button"
+                  onClick={e => { e.stopPropagation(); setMenuOpen(v => !v) }}
+                  className="w-8 h-8 rounded-full flex items-center justify-center focus:outline-none"
+                  style={{ background: 'rgba(15,23,42,0.06)', color: '#64748B' }}
+                  aria-label="Options"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <circle cx="10" cy="4"  r="1.5" />
+                    <circle cx="10" cy="10" r="1.5" />
+                    <circle cx="10" cy="16" r="1.5" />
+                  </svg>
+                </button>
+                {menuOpen && (
+                  <div
+                    className="absolute top-full right-0 mt-1.5 w-44 rounded-2xl overflow-hidden z-20"
+                    style={{
+                      background: 'rgba(15,23,42,0.88)',
+                      backdropFilter: 'blur(16px)',
+                      border: '1px solid rgba(255,255,255,0.12)',
+                      boxShadow: '0 8px 24px rgba(0,0,0,0.30)',
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={e => { e.stopPropagation(); setMenuOpen(false); onEdit?.() }}
+                      className="w-full px-4 py-3 text-left text-sm font-medium text-white transition-colors focus:outline-none"
+                      style={{ background: 'transparent' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      Edit Moment
+                    </button>
+                    <button
+                      type="button"
+                      onClick={e => { e.stopPropagation(); setMenuOpen(false); onDelete?.() }}
+                      className="w-full px-4 py-3 text-left text-sm font-medium transition-colors focus:outline-none"
+                      style={{ background: 'transparent', borderTop: '1px solid rgba(255,255,255,0.10)', color: '#FCA5A5' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      Delete Moment
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Title + destination + region + spots */}
@@ -540,27 +598,29 @@ function MomentCard({
           </p>
         </div>
 
-        <div className="flex gap-2 mt-4">
-          <button
-            type="button"
-            onClick={e => { e.stopPropagation(); handleSendRequest() }}
-            disabled={requesting || !!status || isOwn || isFull}
-            className="flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all focus:outline-none"
-            style={requestBtnStyle}
-          >
-            {requestBtnLabel}
-          </button>
+        {!isOwn && (
+          <div className="flex gap-2 mt-4">
+            <button
+              type="button"
+              onClick={e => { e.stopPropagation(); handleSendRequest() }}
+              disabled={requesting || !!status || isFull}
+              className="flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all focus:outline-none"
+              style={requestBtnStyle}
+            >
+              {requestBtnLabel}
+            </button>
 
-          <button
-            type="button"
-            onClick={e => { e.stopPropagation(); handleChat() }}
-            disabled={!chatBtnActive || chatting}
-            className="flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all focus:outline-none"
-            style={chatBtnStyle}
-          >
-            {chatting ? '…' : 'Chat'}
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={e => { e.stopPropagation(); handleChat() }}
+              disabled={chatting}
+              className="flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all focus:outline-none"
+              style={chatBtnStyle}
+            >
+              {chatting ? '…' : 'Chat'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -568,7 +628,7 @@ function MomentCard({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function ExplorePage({ userId, onNotifications, onOpenChat, onSelectMoment }: Props) {
+export default function ExplorePage({ userId, onNotifications, onOpenChat, onSelectMoment, onEditMoment }: Props) {
   const [moments,          setMoments]          = useState<MomentRow[]>([])
   const [loading,          setLoading]          = useState(true)
   const [error,            setError]            = useState<string | null>(null)
@@ -585,6 +645,17 @@ export default function ExplorePage({ userId, onNotifications, onOpenChat, onSel
     const id = ++toastCounter.current
     setToasts(prev => [...prev, { id, message, kind }])
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000)
+  }
+
+  async function handleDeleteMoment(id: string) {
+    const confirmed = window.confirm(
+      'Are you sure you want to delete this moment? This will also remove all join requests and the associated chat.'
+    )
+    if (!confirmed) return
+    const { error } = await supabase.from('moments').delete().eq('id', id)
+    if (error) { pushToast('Could not delete: ' + error.message, 'error'); return }
+    setMoments(prev => prev.filter(m => m.id !== id))
+    pushToast('Moment deleted', 'success')
   }
 
   useEffect(() => {
@@ -870,6 +941,8 @@ export default function ExplorePage({ userId, onNotifications, onOpenChat, onSel
                 onToast={pushToast}
                 onOpenChat={onOpenChat}
                 onSelect={() => onSelectMoment(moment.id)}
+                onEdit={moment.creator_id === userId ? () => onEditMoment(moment.id) : undefined}
+                onDelete={moment.creator_id === userId ? () => handleDeleteMoment(moment.id) : undefined}
               />
             ))}
           </div>
