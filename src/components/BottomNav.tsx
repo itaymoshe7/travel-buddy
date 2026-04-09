@@ -92,6 +92,7 @@ export default function BottomNav() {
   const { pathname } = useLocation()
   const navigate     = useNavigate()
   const active       = activeTabFromPath(pathname)
+  const activeIndex  = TABS.findIndex(t => t.id === active)
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40"
@@ -101,7 +102,24 @@ export default function BottomNav() {
         boxShadow:      '0 -1px 0 rgba(226,232,240,0.6), 0 -8px 24px rgba(15,23,42,0.04)',
       }}>
 
-      <div className="flex items-center max-w-lg mx-auto" style={{ height: '64px' }}>
+      <div className="relative flex items-center max-w-lg mx-auto" style={{ height: '64px' }}>
+
+        {/* Sliding active indicator — a 2px pill that glides between tabs */}
+        <div
+          aria-hidden
+          style={{
+            position:   'absolute',
+            top:        0,
+            left:       0,
+            height:     '2px',
+            width:      '20%',
+            borderRadius: '0 0 3px 3px',
+            background: 'linear-gradient(90deg, #1D4ED8, #0D9488)',
+            transform:  `translateX(${activeIndex * 100}%)`,
+            transition: 'transform 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+          }}
+        />
+
         {TABS.map(tab => {
           const isActive = active === tab.id
           const isCreate = tab.id === 'create'
@@ -110,13 +128,16 @@ export default function BottomNav() {
               key={tab.id}
               type="button"
               onClick={() => navigate(TAB_PATH[tab.id])}
-              className="flex-1 flex flex-col items-center justify-center gap-0.5 focus:outline-none transition-colors"
-              style={{ height: '100%' }}
+              className="flex-1 flex flex-col items-center justify-center gap-0.5 focus:outline-none"
+              style={{ height: '100%', transition: 'transform 80ms ease' }}
             >
               {tab.icon(isActive)}
               <span
                 className="text-[10px] font-semibold tracking-wide"
-                style={{ color: isCreate ? (isActive ? '#1D4ED8' : '#0D9488') : (isActive ? '#1D4ED8' : '#94A3B8') }}
+                style={{
+                  color:      isCreate ? (isActive ? '#1D4ED8' : '#0D9488') : (isActive ? '#1D4ED8' : '#94A3B8'),
+                  transition: 'color 200ms ease',
+                }}
               >
                 {tab.label}
               </span>

@@ -237,7 +237,7 @@ export default function MomentDetail({ momentId, userId, onBack, onOpenChat, onV
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen pb-10" style={{ background: 'transparent' }}>
+    <div className="min-h-screen pb-10 animate-slide-up" style={{ background: 'transparent' }}>
 
       {/* Header */}
       <div className="sticky top-0 z-10 px-5 pt-5 pb-3"
