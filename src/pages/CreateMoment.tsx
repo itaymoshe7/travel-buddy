@@ -164,35 +164,22 @@ function DatePicker({
   placeholder,
   error,
 }: {
-  value:        string            // ISO yyyy-mm-dd or ''
-  onChange:     (iso: string) => void
-  disabled?:    boolean
+  value:         string
+  onChange:      (iso: string) => void
+  disabled?:     boolean
   disabledDays?: (date: Date) => boolean
-  placeholder?: string
-  error?:       string
+  placeholder?:  string
+  error?:        string
 }) {
   const [open, setOpen] = useState(false)
-  const wrapRef = useRef<HTMLDivElement>(null)
   const selected = toDate(value)
-
-  // Close on outside click
-  useEffect(() => {
-    if (!open) return
-    function onDown(e: MouseEvent) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
-        setOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
-  }, [open])
 
   const display = selected
     ? selected.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : placeholder ?? 'Select date'
 
   return (
-    <div ref={wrapRef} className="relative">
+    <div>
       {/* Trigger */}
       <button
         type="button"
@@ -206,7 +193,6 @@ function DatePicker({
               : 'border-slate-200 bg-slate-50 text-text-main focus:border-primary focus:bg-white'}`}
       >
         <span style={{ color: selected ? undefined : '#94A3B8' }}>{display}</span>
-        {/* Calendar icon */}
         <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}
           style={{ color: isDisabled ? '#CBD5E1' : '#94A3B8' }}>
           <rect x="3" y="4" width="18" height="18" rx="3" ry="3" />
@@ -214,35 +200,67 @@ function DatePicker({
         </svg>
       </button>
 
-      {/* Popover */}
+      {/* Bottom sheet calendar */}
       {open && !isDisabled && (
-        <div
-          className="absolute z-50 rounded-2xl overflow-hidden"
-          style={{
-            top: 'calc(100% + 6px)',
-            left: 0,
-            background: 'white',
-            boxShadow: '0 8px 32px rgba(15,23,42,0.15)',
-            border: '1px solid #E2E8F0',
-          }}
-        >
-          <DayPicker
-            mode="single"
-            selected={selected}
-            onSelect={(day) => {
-              onChange(day ? toISO(day) : '')
-              setOpen(false)
-            }}
-            disabled={disabledDays}
-            styles={{
-              root: { margin: 0, fontFamily: 'inherit', fontSize: 14 },
-            }}
-            classNames={{
-              today: 'rdp-today',
-              selected: 'rdp-selected',
-            }}
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-40"
+            style={{ background: 'rgba(15,23,42,0.45)' }}
+            onClick={() => setOpen(false)}
           />
-        </div>
+          {/* Sheet */}
+          <div
+            className="fixed bottom-0 left-0 right-0 z-50"
+            style={{
+              background:    'white',
+              borderRadius:  '24px 24px 0 0',
+              boxShadow:     '0 -4px 40px rgba(15,23,42,0.18)',
+              paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 20px)',
+            }}
+          >
+            {/* Drag handle */}
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="w-10 h-1 rounded-full" style={{ background: '#E2E8F0' }} />
+            </div>
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-3">
+              <p className="text-base font-semibold" style={{ color: '#0F172A' }}>
+                {placeholder ?? 'Select date'}
+              </p>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="w-8 h-8 rounded-full flex items-center justify-center focus:outline-none"
+                style={{ background: '#F1F5F9', color: '#64748B' }}
+                aria-label="Close"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            {/* Calendar centred in sheet */}
+            <div className="flex justify-center px-2 pb-4">
+              <DayPicker
+                mode="single"
+                selected={selected}
+                onSelect={(day) => {
+                  onChange(day ? toISO(day) : '')
+                  setOpen(false)
+                }}
+                disabled={disabledDays}
+                styles={{
+                  root: { margin: 0, fontFamily: 'inherit', fontSize: 14 },
+                }}
+                classNames={{
+                  today:    'rdp-today',
+                  selected: 'rdp-selected',
+                }}
+              />
+            </div>
+          </div>
+        </>
       )}
 
       {error && <p className="text-xs text-red-500 mt-1">{error}</p>}

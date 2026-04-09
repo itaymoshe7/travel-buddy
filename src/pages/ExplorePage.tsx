@@ -950,80 +950,25 @@ export default function ExplorePage({ userId, onNotifications, onSearch, onOpenC
         {/* ── Secondary filters: Date range + Spots ──────────────────────────── */}
         <div className="flex items-center gap-2 pb-3">
 
-          {/* Date range button + popover */}
-          <div
-            className="relative"
-            tabIndex={-1}
-            onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDatePopover(false) }}
+          {/* Date range button — sheet rendered at root level */}
+          <button
+            type="button"
+            onClick={() => { setDatePopover(v => !v); setSpotsPopover(false) }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all focus:outline-none"
+            style={
+              dateFrom || dateTo
+                ? { background: '#1D4ED8', color: 'white', border: '1px solid #1D4ED8' }
+                : { background: 'white', color: '#64748B', border: '1px solid #E2E8F0' }
+            }
           >
-            <button
-              type="button"
-              onClick={() => { setDatePopover(v => !v); setSpotsPopover(false) }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all focus:outline-none"
-              style={
-                dateFrom || dateTo
-                  ? { background: '#1D4ED8', color: 'white', border: '1px solid #1D4ED8' }
-                  : { background: 'white', color: '#64748B', border: '1px solid #E2E8F0' }
-              }
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round"
-                  d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
-              </svg>
-              {dateFrom || dateTo
-                ? [dateFrom && `From ${dateFrom}`, dateTo && `To ${dateTo}`].filter(Boolean).join(' · ')
-                : 'Dates'}
-            </button>
-
-            {datePopover && (
-              <div
-                className="absolute top-full left-0 mt-2 rounded-2xl p-4 z-40"
-                style={{
-                  background: 'white',
-                  boxShadow: '0 4px 6px rgba(15,23,42,0.06), 0 10px 32px rgba(15,23,42,0.14)',
-                  border: '1px solid rgba(226,232,240,0.8)',
-                  minWidth: '240px',
-                }}
-              >
-                <p className="text-[11px] font-semibold uppercase tracking-widest mb-3" style={{ color: '#94A3B8' }}>
-                  Date Range
-                </p>
-                <div className="flex flex-col gap-2">
-                  <div>
-                    <label className="block text-xs font-medium mb-1" style={{ color: '#64748B' }}>From</label>
-                    <input
-                      type="date"
-                      value={dateFrom}
-                      onChange={e => setDateFrom(e.target.value)}
-                      className="w-full text-xs rounded-xl px-3 py-2 focus:outline-none"
-                      style={{ border: '1.5px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A', fontFamily: 'inherit' }}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium mb-1" style={{ color: '#64748B' }}>To</label>
-                    <input
-                      type="date"
-                      value={dateTo}
-                      min={dateFrom || undefined}
-                      onChange={e => setDateTo(e.target.value)}
-                      className="w-full text-xs rounded-xl px-3 py-2 focus:outline-none"
-                      style={{ border: '1.5px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A', fontFamily: 'inherit' }}
-                    />
-                  </div>
-                </div>
-                {(dateFrom || dateTo) && (
-                  <button
-                    type="button"
-                    onClick={() => { setDateFrom(''); setDateTo('') }}
-                    className="w-full mt-3 py-1.5 rounded-xl text-xs font-semibold focus:outline-none"
-                    style={{ background: '#F1F5F9', color: '#64748B' }}
-                  >
-                    Clear dates
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round"
+                d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+            </svg>
+            {dateFrom || dateTo
+              ? [dateFrom && `From ${dateFrom}`, dateTo && `To ${dateTo}`].filter(Boolean).join(' · ')
+              : 'Dates'}
+          </button>
 
           {/* Spots filter button + popover */}
           <div
@@ -1174,6 +1119,96 @@ export default function ExplorePage({ userId, onNotifications, onSearch, onOpenC
 
       {/* ── Toasts ─────────────────────────────────────────────────────────── */}
       <Toast toasts={toasts} />
+
+      {/* ── Date filter bottom sheet ────────────────────────────────────────── */}
+      {datePopover && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-40"
+            style={{ background: 'rgba(15,23,42,0.45)' }}
+            onClick={() => setDatePopover(false)}
+          />
+          {/* Sheet */}
+          <div
+            className="fixed bottom-0 left-0 right-0 z-50"
+            style={{
+              background:    'white',
+              borderRadius:  '24px 24px 0 0',
+              boxShadow:     '0 -4px 40px rgba(15,23,42,0.18)',
+              paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 20px)',
+            }}
+          >
+            {/* Drag handle */}
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="w-10 h-1 rounded-full" style={{ background: '#E2E8F0' }} />
+            </div>
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-3">
+              <p className="text-base font-semibold" style={{ color: '#0F172A' }}>Date Range</p>
+              <button
+                type="button"
+                onClick={() => setDatePopover(false)}
+                className="w-8 h-8 rounded-full flex items-center justify-center focus:outline-none"
+                style={{ background: '#F1F5F9', color: '#64748B' }}
+                aria-label="Close"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            {/* Inputs */}
+            <div className="px-5 pb-2 flex flex-col gap-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wide mb-1.5" style={{ color: '#94A3B8' }}>
+                  From
+                </label>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={e => setDateFrom(e.target.value)}
+                  className="w-full rounded-xl px-4 py-3 text-sm focus:outline-none"
+                  style={{ border: '1.5px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A', fontFamily: 'inherit' }}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wide mb-1.5" style={{ color: '#94A3B8' }}>
+                  To
+                </label>
+                <input
+                  type="date"
+                  value={dateTo}
+                  min={dateFrom || undefined}
+                  onChange={e => setDateTo(e.target.value)}
+                  className="w-full rounded-xl px-4 py-3 text-sm focus:outline-none"
+                  style={{ border: '1.5px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A', fontFamily: 'inherit' }}
+                />
+              </div>
+              <div className="flex gap-3 pt-1">
+                {(dateFrom || dateTo) && (
+                  <button
+                    type="button"
+                    onClick={() => { setDateFrom(''); setDateTo('') }}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold focus:outline-none"
+                    style={{ background: '#F1F5F9', color: '#64748B' }}
+                  >
+                    Clear
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setDatePopover(false)}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-bold focus:outline-none"
+                  style={{ background: '#1D4ED8', color: 'white' }}
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
     </div>
   )
