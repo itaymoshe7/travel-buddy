@@ -143,13 +143,15 @@ function Toast({ toasts }: { toasts: ToastState[] }) {
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 
 function Avatar({ url, name }: { url: string | null; name: string | null }) {
-  if (url) {
+  const [error, setError] = useState(false)
+  if (url && !error) {
     return (
       <img
         src={url}
         alt={name ?? 'avatar'}
         className="w-10 h-10 rounded-full object-cover shrink-0"
         style={{ border: '2px solid white', boxShadow: '0 1px 4px rgba(15,23,42,0.12)' }}
+        onError={() => setError(true)}
       />
     )
   }
@@ -164,6 +166,30 @@ function Avatar({ url, name }: { url: string | null; name: string | null }) {
 // ─── Participant Avatars ──────────────────────────────────────────────────────
 
 const MAX_SHOWN = 3
+
+function ParticipantImg({ url, name }: { url: string | null; name: string | null }) {
+  const [error, setError] = useState(false)
+  if (url && !error) {
+    return (
+      <img
+        src={url}
+        alt={name ?? ''}
+        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        onError={() => setError(true)}
+      />
+    )
+  }
+  return (
+    <div style={{
+      width: '100%', height: '100%',
+      background: 'linear-gradient(135deg,#EFF6FF,#DBEAFE)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: 8, fontWeight: 700, color: '#1D4ED8',
+    }}>
+      {initials(name)}
+    </div>
+  )
+}
 
 function ParticipantAvatars({ participants, mut = '#94A3B8' }: { participants: Participant[]; mut?: string }) {
   if (participants.length === 0) return null
@@ -183,18 +209,7 @@ function ParticipantAvatars({ participants, mut = '#94A3B8' }: { participants: P
               zIndex: shown.length - i,
               position: 'relative',
             }}>
-            {p.avatar_url ? (
-              <img src={p.avatar_url} alt={p.full_name ?? ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : (
-              <div style={{
-                width: '100%', height: '100%',
-                background: 'linear-gradient(135deg,#EFF6FF,#DBEAFE)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 8, fontWeight: 700, color: '#1D4ED8',
-              }}>
-                {initials(p.full_name)}
-              </div>
-            )}
+            <ParticipantImg url={p.avatar_url} name={p.full_name} />
           </div>
         ))}
         {extra > 0 && (
@@ -259,17 +274,18 @@ function MomentCard({
   onDelete?:       () => void
   onViewProfile?:  (userId: string) => void
 }) {
-  const [requesting, setRequesting] = useState(false)
-  const [chatting,   setChatting]   = useState(false)
-  const [menuOpen,   setMenuOpen]   = useState(false)
-  const [pressed,    setPressed]    = useState(false)
+  const [requesting,  setRequesting]  = useState(false)
+  const [chatting,    setChatting]    = useState(false)
+  const [menuOpen,    setMenuOpen]    = useState(false)
+  const [pressed,     setPressed]     = useState(false)
+  const [imageError,  setImageError]  = useState(false)
   const isOwn      = moment.creator_id === userId
   const status     = requestInfo?.status ?? null
   const isPending  = status === 'pending'
   const isAccepted = status === 'accepted'
   const spotsLeft  = moment.total_spots - acceptedCount
   const isFull     = spotsLeft <= 0
-  const hasImage   = !!moment.image_url
+  const hasImage   = !!moment.image_url && !imageError
 
   async function handleSendRequest() {
     if (status || isOwn || isFull) return
@@ -326,6 +342,7 @@ function MomentCard({
           src={moment.image_url!}
           alt={moment.title}
           className="absolute inset-0 w-full h-full object-cover"
+          onError={() => setImageError(true)}
         />
 
         {/* Dual overlay: bottom gradient keeps bottom text readable, top gradient keeps creator readable */}

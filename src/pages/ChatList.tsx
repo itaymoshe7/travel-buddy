@@ -36,11 +36,13 @@ function formatChatTime(ts: string | null): string {
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 
 function Avatar({ url, name }: { url: string | null; name: string | null }) {
+  const [error, setError] = useState(false)
   const initials = (name ?? '?').split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
-  if (url) {
+  if (url && !error) {
     return (
       <img src={url} alt={name ?? ''} className="w-12 h-12 rounded-full object-cover shrink-0"
-        style={{ border: '2px solid white', boxShadow: '0 1px 4px rgba(15,23,42,0.10)' }} />
+        style={{ border: '2px solid white', boxShadow: '0 1px 4px rgba(15,23,42,0.10)' }}
+        onError={() => setError(true)} />
     )
   }
   return (
