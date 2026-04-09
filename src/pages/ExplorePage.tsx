@@ -38,9 +38,11 @@ interface Participant {
 interface Props {
   userId:          string
   onNotifications: () => void
+  onSearch:        () => void
   onOpenChat:      (chatId: string, name: string) => void
   onSelectMoment:  (id: string) => void
   onEditMoment:    (id: string) => void
+  onViewProfile:   (userId: string) => void
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -241,18 +243,20 @@ function MomentCard({
   onSelect,
   onEdit,
   onDelete,
+  onViewProfile,
 }: {
-  moment:        MomentRow
-  userId:        string
-  requestInfo:   RequestInfo | null
-  acceptedCount: number
-  participants:  Participant[]
-  onRequested:   (id: string) => void
-  onToast:       (msg: string, kind: 'success' | 'error') => void
-  onOpenChat:    (chatId: string, name: string) => void
-  onSelect:      () => void
-  onEdit?:       () => void
-  onDelete?:     () => void
+  moment:          MomentRow
+  userId:          string
+  requestInfo:     RequestInfo | null
+  acceptedCount:   number
+  participants:    Participant[]
+  onRequested:     (id: string) => void
+  onToast:         (msg: string, kind: 'success' | 'error') => void
+  onOpenChat:      (chatId: string, name: string) => void
+  onSelect:        () => void
+  onEdit?:         () => void
+  onDelete?:       () => void
+  onViewProfile?:  (userId: string) => void
 }) {
   const [requesting, setRequesting] = useState(false)
   const [chatting,   setChatting]   = useState(false)
@@ -325,8 +329,17 @@ function MomentCard({
 
           {/* Top: creator row + three-dots menu */}
           <div className="flex items-center gap-2.5">
-            <Avatar url={creator?.avatar_url ?? null} name={creator?.full_name ?? null} />
-            <div className="flex-1 min-w-0">
+            <div
+              onClick={e => { e.stopPropagation(); if (!isOwn) onViewProfile?.(moment.creator_id) }}
+              style={{ cursor: isOwn ? 'default' : 'pointer' }}
+            >
+              <Avatar url={creator?.avatar_url ?? null} name={creator?.full_name ?? null} />
+            </div>
+            <div
+              className="flex-1 min-w-0"
+              onClick={e => { e.stopPropagation(); if (!isOwn) onViewProfile?.(moment.creator_id) }}
+              style={{ cursor: isOwn ? 'default' : 'pointer' }}
+            >
               <p className="text-sm font-semibold truncate" style={{ color: '#FFFFFF', textShadow: '0 1px 4px rgba(0,0,0,0.60)' }}>
                 {creator?.full_name ?? 'Traveller'}
               </p>
@@ -487,8 +500,17 @@ function MomentCard({
         <div className="cursor-pointer" onClick={onSelect}>
           {/* Top row: avatar + name + activity icon */}
           <div className="flex items-center gap-3 mb-4">
-            <Avatar url={creator?.avatar_url ?? null} name={creator?.full_name ?? null} />
-            <div className="flex-1 min-w-0">
+            <div
+              onClick={e => { e.stopPropagation(); if (!isOwn) onViewProfile?.(moment.creator_id) }}
+              style={{ cursor: isOwn ? 'default' : 'pointer' }}
+            >
+              <Avatar url={creator?.avatar_url ?? null} name={creator?.full_name ?? null} />
+            </div>
+            <div
+              className="flex-1 min-w-0"
+              onClick={e => { e.stopPropagation(); if (!isOwn) onViewProfile?.(moment.creator_id) }}
+              style={{ cursor: isOwn ? 'default' : 'pointer' }}
+            >
               <p className="text-sm font-semibold truncate" style={{ color: '#0F172A' }}>
                 {creator?.full_name ?? 'Traveller'}
               </p>
@@ -628,7 +650,7 @@ function MomentCard({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function ExplorePage({ userId, onNotifications, onOpenChat, onSelectMoment, onEditMoment }: Props) {
+export default function ExplorePage({ userId, onNotifications, onSearch, onOpenChat, onSelectMoment, onEditMoment, onViewProfile }: Props) {
   const [moments,          setMoments]          = useState<MomentRow[]>([])
   const [loading,          setLoading]          = useState(true)
   const [error,            setError]            = useState<string | null>(null)
@@ -776,31 +798,47 @@ export default function ExplorePage({ userId, onNotifications, onOpenChat, onSel
       <div className="sticky top-0 z-30 px-5 pt-5 pb-0"
         style={{ background: '#F0FDFC', boxShadow: '0 1px 0 rgba(226,232,240,0.8), 0 2px 8px rgba(15,23,42,0.04)' }}>
 
-        {/* Label row + bell */}
+        {/* Label row + icon buttons */}
         <div className="flex items-start justify-between mb-1">
           <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: '#94A3B8' }}>
             {activeRegionMeta ? `${activeRegionMeta.emoji} ${activeRegionMeta.label}` : 'Global Feed'}
           </p>
-          <button
-            type="button"
-            aria-label="Notifications"
-            onClick={onNotifications}
-            className="relative w-8 h-8 rounded-full flex items-center justify-center -mt-0.5 transition-colors focus:outline-none"
-            style={{ background: '#F1F5F9', color: '#64748B' }}
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-              <path strokeLinecap="round" strokeLinejoin="round"
-                d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
-            </svg>
-            {pendingCount > 0 && (
-              <span className="absolute top-0 right-0 flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
-                  style={{ background: '#EF4444' }} />
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5"
-                  style={{ background: '#EF4444' }} />
-              </span>
-            )}
-          </button>
+          <div className="flex items-center gap-2 -mt-0.5">
+            {/* Search */}
+            <button
+              type="button"
+              aria-label="Search"
+              onClick={onSearch}
+              className="w-8 h-8 rounded-full flex items-center justify-center transition-colors focus:outline-none"
+              style={{ background: '#F1F5F9', color: '#64748B' }}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round"
+                  d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803 7.5 7.5 0 0015.803 15.803z" />
+              </svg>
+            </button>
+            {/* Notifications */}
+            <button
+              type="button"
+              aria-label="Notifications"
+              onClick={onNotifications}
+              className="relative w-8 h-8 rounded-full flex items-center justify-center transition-colors focus:outline-none"
+              style={{ background: '#F1F5F9', color: '#64748B' }}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round"
+                  d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+              </svg>
+              {pendingCount > 0 && (
+                <span className="absolute top-0 right-0 flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+                    style={{ background: '#EF4444' }} />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5"
+                    style={{ background: '#EF4444' }} />
+                </span>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Title */}
@@ -943,6 +981,7 @@ export default function ExplorePage({ userId, onNotifications, onOpenChat, onSel
                 onSelect={() => onSelectMoment(moment.id)}
                 onEdit={moment.creator_id === userId ? () => onEditMoment(moment.id) : undefined}
                 onDelete={moment.creator_id === userId ? () => handleDeleteMoment(moment.id) : undefined}
+                onViewProfile={onViewProfile}
               />
             ))}
           </div>

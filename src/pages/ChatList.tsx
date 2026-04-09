@@ -17,6 +17,7 @@ interface ChatEntry {
 interface Props {
   userId:     string
   onOpenChat: (chatId: string, otherName: string) => void
+  onSearch:   () => void
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -53,7 +54,7 @@ function Avatar({ url, name }: { url: string | null; name: string | null }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function ChatList({ userId, onOpenChat }: Props) {
+export default function ChatList({ userId, onOpenChat, onSearch }: Props) {
   const [chats,   setChats]   = useState<ChatEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState<string | null>(null)
@@ -135,9 +136,23 @@ export default function ChatList({ userId, onOpenChat }: Props) {
       {/* Header */}
       <div className="sticky top-0 z-10 px-5 pt-5 pb-3"
         style={{ background: 'rgba(240,253,252,0.92)', backdropFilter: 'blur(12px)' }}>
-        <p className="text-[11px] font-semibold uppercase tracking-widest mb-1" style={{ color: '#94A3B8' }}>
-          Messages
-        </p>
+        <div className="flex items-start justify-between mb-1">
+          <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: '#94A3B8' }}>
+            Messages
+          </p>
+          <button
+            type="button"
+            aria-label="Search"
+            onClick={onSearch}
+            className="w-8 h-8 rounded-full flex items-center justify-center -mt-0.5 transition-colors focus:outline-none"
+            style={{ background: '#F1F5F9', color: '#64748B' }}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round"
+                d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803 7.5 7.5 0 0015.803 15.803z" />
+            </svg>
+          </button>
+        </div>
         <h1 className="text-[26px] font-bold leading-tight"
           style={{ color: '#0F172A', letterSpacing: '-0.02em' }}>
           Chats

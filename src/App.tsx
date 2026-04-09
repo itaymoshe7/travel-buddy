@@ -24,9 +24,9 @@ import ChatList           from './pages/ChatList'
 import ChatRoom           from './pages/ChatRoom'
 import NotificationsPage  from './pages/NotificationsPage'
 import MomentDetail       from './pages/MomentDetail'
-import PublicProfile      from './pages/PublicProfile'
 import ResetPassword      from './pages/ResetPassword'
 import EditMoment         from './pages/EditMoment'
+import Search             from './pages/Search'
 import BottomNav          from './components/BottomNav'
 
 // ─── Auth gate ────────────────────────────────────────────────────────────────
@@ -79,7 +79,7 @@ function MomentDetailRoute({ userId }: { userId: string }) {
       userId={userId}
       onBack={() => navigate(-1)}
       onOpenChat={(id, name) => navigate(`/chat/${id}`, { state: { partnerName: name } })}
-      onViewProfile={id => navigate(`/user/${id}`)}
+      onViewProfile={id => navigate(`/profile/${id}`)}
     />
   )
 }
@@ -112,10 +112,19 @@ function EditMomentRoute({ userId }: { userId: string }) {
   )
 }
 
-function PublicProfileRoute() {
+function ProfileViewRoute({ currentUserId }: { currentUserId: string }) {
   const { userId } = useParams<{ userId: string }>()
   const navigate   = useNavigate()
-  return <PublicProfile userId={userId!} onBack={() => navigate(-1)} />
+  return (
+    <ProfileScreen
+      userId={currentUserId}
+      viewedUserId={userId!}
+      onLogOut={async () => { await supabase.auth.signOut(); navigate('/welcome', { replace: true }) }}
+      onSelectMoment={id => navigate(`/moment/${id}`)}
+      onEditMoment={id => navigate(`/edit/${id}`)}
+      onBack={() => navigate(-1)}
+    />
+  )
 }
 
 function RegisterStep2Route({ userId }: { userId: string }) {
@@ -209,9 +218,11 @@ function AppRoutes() {
             <ExplorePage
               userId={uid}
               onNotifications={() => navigate('/notifications')}
+              onSearch={() => navigate('/search')}
               onOpenChat={(id, name) => navigate(`/chat/${id}`, { state: { partnerName: name } })}
               onSelectMoment={id => navigate(`/moment/${id}`)}
               onEditMoment={id => navigate(`/edit/${id}`)}
+              onViewProfile={id => navigate(`/profile/${id}`)}
             />
           } />
 
@@ -228,6 +239,7 @@ function AppRoutes() {
             <ChatList
               userId={uid}
               onOpenChat={(id, name) => navigate(`/chat/${id}`, { state: { partnerName: name } })}
+              onSearch={() => navigate('/search')}
             />
           } />
 
@@ -240,9 +252,19 @@ function AppRoutes() {
             />
           } />
 
+          {/* Viewing another user's profile — inside tab layout so bottom nav is visible */}
+          <Route path="/profile/:userId" element={<ProfileViewRoute currentUserId={uid} />} />
+
         </Route>
 
         {/* Fullscreen pages — no bottom nav */}
+
+        <Route path="/search" element={
+          <Search
+            onBack={() => navigate(-1)}
+            onViewProfile={id => navigate(`/profile/${id}`)}
+          />
+        } />
 
         <Route path="/create" element={
           <CreateMoment
@@ -263,7 +285,6 @@ function AppRoutes() {
         <Route path="/moment/:momentId" element={<MomentDetailRoute userId={uid} />} />
         <Route path="/edit/:momentId"   element={<EditMomentRoute   userId={uid} />} />
         <Route path="/chat/:chatId"     element={<ChatRoomRoute     userId={uid} />} />
-        <Route path="/user/:userId"     element={<PublicProfileRoute />} />
 
       </Route>
 

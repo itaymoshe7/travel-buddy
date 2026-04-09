@@ -64,10 +64,12 @@ type RecentMoment = MomentCard
 type JoinedMoment = MomentCard
 
 interface Props {
-  userId:         string
-  onLogOut:       () => void
-  onSelectMoment: (id: string) => void
-  onEditMoment:   (id: string) => void
+  userId:          string            // logged-in user
+  viewedUserId?:   string            // if set, show this user's profile (read-only for others)
+  onLogOut:        () => void
+  onSelectMoment:  (id: string) => void
+  onEditMoment:    (id: string) => void
+  onBack?:         () => void        // back button when viewing someone else's profile
 }
 
 // ─── Travel tags ──────────────────────────────────────────────────────────────
@@ -274,7 +276,9 @@ function Section({ label, children }: { label: string; children: React.ReactNode
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function ProfileScreen({ userId, onLogOut, onSelectMoment, onEditMoment }: Props) {
+export default function ProfileScreen({ userId, viewedUserId, onLogOut, onSelectMoment, onEditMoment, onBack }: Props) {
+  const profileId = viewedUserId ?? userId
+  const isOwn     = profileId === userId
   const [profile,       setProfile]       = useState<Profile | null>(null)
   const [stats,         setStats]         = useState<Stats>({ joinedLabel: '—', created: 0, joined: 0 })
   const [recentMoments,  setRecentMoments]  = useState<RecentMoment[]>([])
@@ -314,31 +318,31 @@ export default function ProfileScreen({ userId, onLogOut, onSelectMoment, onEdit
         supabase
           .from('profiles')
           .select('full_name, email, social_link, bio, avatar_url, travel_region, travel_vibe, travel_tags, gender, age, created_at')
-          .eq('id', userId)
+          .eq('id', profileId)
           .single(),
 
         supabase
           .from('moments')
           .select('id', { count: 'exact', head: true })
-          .eq('creator_id', userId),
+          .eq('creator_id', profileId),
 
         supabase
           .from('moment_requests')
           .select('id', { count: 'exact', head: true })
-          .eq('user_id', userId)
+          .eq('user_id', profileId)
           .eq('status', 'accepted'),
 
         supabase
           .from('moments')
           .select('id, title, destination, activity_type, start_date, end_date, image_url')
-          .eq('creator_id', userId)
+          .eq('creator_id', profileId)
           .order('created_at', { ascending: false })
           .limit(6),
 
         supabase
           .from('moment_requests')
           .select('moments!moment_id(id, title, destination, activity_type, start_date, end_date, image_url)')
-          .eq('user_id', userId)
+          .eq('user_id', profileId)
           .eq('status', 'accepted')
           .order('created_at', { ascending: false })
           .limit(10),
@@ -366,7 +370,7 @@ export default function ProfileScreen({ userId, onLogOut, onSelectMoment, onEdit
       setLoading(false)
     }
     load()
-  }, [userId])
+  }, [profileId])
 
   async function handleBioBlur() {
     setBioFocus(false)
@@ -497,14 +501,15 @@ export default function ProfileScreen({ userId, onLogOut, onSelectMoment, onEdit
         <div className="flex items-start justify-between">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-widest mb-1" style={{ color: '#94A3B8' }}>
-              My Account
+              {isOwn ? 'My Account' : 'Traveller Profile'}
             </p>
             <h1 className="text-[26px] font-bold leading-tight" style={{ color: '#0F172A', letterSpacing: '-0.02em' }}>
-              Profile
+              {isOwn ? 'Profile' : (profile?.full_name ?? 'Traveller')}
             </h1>
           </div>
 
-          {/* Three-dots menu */}
+          {/* Own profile: three-dots menu. Viewing others: back button */}
+          {isOwn ? (
           <div
             className="relative mt-1"
             tabIndex={-1}
@@ -568,6 +573,19 @@ export default function ProfileScreen({ userId, onLogOut, onSelectMoment, onEdit
               </div>
             )}
           </div>
+          ) : (
+            <button
+              type="button"
+              onClick={onBack}
+              className="mt-1 w-9 h-9 rounded-full flex items-center justify-center focus:outline-none"
+              style={{ background: '#F1F5F9', color: '#64748B' }}
+              aria-label="Back"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
 
@@ -577,7 +595,11 @@ export default function ProfileScreen({ userId, onLogOut, onSelectMoment, onEdit
         <div className="flex flex-col items-center gap-3 pt-2">
 
           {/* Avatar with glowing ring */}
-          <div className="relative">
+          <div
+            className="relative"
+            style={{ cursor: isOwn ? 'pointer' : 'default' }}
+            onClick={isOwn ? () => avatarInputRef.current?.click() : undefined}
+          >
             <div className="absolute inset-0 rounded-full"
               style={{ boxShadow: '0 0 0 3px #0D9488, 0 0 0 6px rgba(13,148,136,0.15), 0 0 24px rgba(13,148,136,0.35)' }} />
             {profile.avatar_url ? (
@@ -590,12 +612,23 @@ export default function ProfileScreen({ userId, onLogOut, onSelectMoment, onEdit
                 {initials(profile.full_name)}
               </div>
             )}
+            {isOwn && (
+              <div
+                className="absolute bottom-0 right-0 w-7 h-7 rounded-full flex items-center justify-center z-10"
+                style={{ background: '#1D4ED8', boxShadow: '0 2px 6px rgba(29,78,216,0.4)' }}
+              >
+                <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </div>
+            )}
           </div>
 
           {/* Name + social link */}
           <div className="text-center">
             <h2 className="text-xl font-bold leading-tight" style={{ color: '#0F172A' }}>
-              {profile.full_name ?? 'Your Name'}
+              {profile.full_name ?? (isOwn ? 'Your Name' : 'Traveller')}
             </h2>
             {profile.social_link && (
               <a
@@ -620,32 +653,40 @@ export default function ProfileScreen({ userId, onLogOut, onSelectMoment, onEdit
 
         {/* ── Bio ─────────────────────────────────────────────────────────── */}
         <Section label="Bio">
-          <textarea
-            value={bio}
-            onChange={e => setBio(e.target.value.slice(0, 200))}
-            onFocus={() => setBioFocus(true)}
-            onBlur={handleBioBlur}
-            placeholder="No bio yet — tap to add one."
-            rows={3}
-            className="w-full resize-none outline-none text-sm leading-relaxed bg-transparent"
-            style={{
-              color:        bio ? '#0F172A' : '#64748B',
-              border:       bioFocus ? '1.5px solid #1D4ED8' : '1.5px solid transparent',
-              borderRadius: '0.75rem',
-              padding:      bioFocus ? '10px 12px' : '0',
-              transition:   'all 150ms ease',
-            }}
-          />
-          {savingBio && (
-            <p className="text-[11px] text-right mt-1" style={{ color: '#64748B' }}>Saving…</p>
+          {isOwn ? (
+            <>
+              <textarea
+                value={bio}
+                onChange={e => setBio(e.target.value.slice(0, 200))}
+                onFocus={() => setBioFocus(true)}
+                onBlur={handleBioBlur}
+                placeholder="No bio yet — tap to add one."
+                rows={3}
+                className="w-full resize-none outline-none text-sm leading-relaxed bg-transparent"
+                style={{
+                  color:        bio ? '#0F172A' : '#64748B',
+                  border:       bioFocus ? '1.5px solid #1D4ED8' : '1.5px solid transparent',
+                  borderRadius: '0.75rem',
+                  padding:      bioFocus ? '10px 12px' : '0',
+                  transition:   'all 150ms ease',
+                }}
+              />
+              {savingBio && (
+                <p className="text-[11px] text-right mt-1" style={{ color: '#64748B' }}>Saving…</p>
+              )}
+            </>
+          ) : (
+            <p className="text-sm leading-relaxed" style={{ color: profile.bio ? '#334155' : '#94A3B8' }}>
+              {profile.bio ?? 'No bio yet.'}
+            </p>
           )}
         </Section>
 
-        {/* ── My Journeys ─────────────────────────────────────────────────── */}
-        <Section label="My Journeys">
+        {/* ── Journeys ────────────────────────────────────────────────────── */}
+        <Section label={isOwn ? 'My Journeys' : 'Journeys'}>
           {joinedMoments.length === 0 ? (
             <p className="text-sm text-center py-2" style={{ color: '#94A3B8' }}>
-              No approved journeys yet — start exploring!
+              {isOwn ? 'No approved journeys yet — start exploring!' : 'No journeys yet.'}
             </p>
           ) : (
             <div className="space-y-2">
@@ -685,16 +726,18 @@ export default function ProfileScreen({ userId, onLogOut, onSelectMoment, onEdit
               ))}
             </div>
           )}
-          <button
-            type="button"
-            className="w-full py-2.5 rounded-full text-sm font-semibold transition-colors focus:outline-none"
-            style={{ background: '#F1F5F9', color: '#64748B' }}
-            onMouseEnter={e => (e.currentTarget.style.background = '#E2E8F0')}
-            onMouseLeave={e => (e.currentTarget.style.background = '#F1F5F9')}
-            onClick={() => { setPendingTags(profile.travel_tags ?? []); setActiveModal('tags') }}
-          >
-            {(profile.travel_tags ?? []).length > 0 ? 'Edit travel tags' : '+ Add travel tags'}
-          </button>
+          {isOwn && (
+            <button
+              type="button"
+              className="w-full py-2.5 rounded-full text-sm font-semibold transition-colors focus:outline-none"
+              style={{ background: '#F1F5F9', color: '#64748B' }}
+              onMouseEnter={e => (e.currentTarget.style.background = '#E2E8F0')}
+              onMouseLeave={e => (e.currentTarget.style.background = '#F1F5F9')}
+              onClick={() => { setPendingTags(profile.travel_tags ?? []); setActiveModal('tags') }}
+            >
+              {(profile.travel_tags ?? []).length > 0 ? 'Edit travel tags' : '+ Add travel tags'}
+            </button>
+          )}
         </Section>
 
         {/* ── Personal Info ───────────────────────────────────────────────── */}
@@ -716,11 +759,11 @@ export default function ProfileScreen({ userId, onLogOut, onSelectMoment, onEdit
           </div>
         </Section>
 
-        {/* ── My Recent Moments ───────────────────────────────────────────── */}
-        <Section label="My Recent Moments">
+        {/* ── Moments ─────────────────────────────────────────────────────── */}
+        <Section label={isOwn ? 'My Recent Moments' : 'Moments'}>
           {recentMoments.length === 0 ? (
             <p className="text-sm text-center py-2" style={{ color: '#94A3B8' }}>
-              No moments yet — tap + to create one.
+              {isOwn ? 'No moments yet — tap + to create one.' : 'No moments yet.'}
             </p>
           ) : (
             <div className="space-y-2">
@@ -729,29 +772,32 @@ export default function ProfileScreen({ userId, onLogOut, onSelectMoment, onEdit
                   key={m.id}
                   moment={m}
                   onSelect={onSelectMoment}
-                  onEdit={() => onEditMoment(m.id)}
-                  onDelete={() => handleDeleteMoment(m.id)}
+                  onEdit={isOwn ? () => onEditMoment(m.id) : undefined}
+                  onDelete={isOwn ? () => handleDeleteMoment(m.id) : undefined}
                 />
               ))}
             </div>
           )}
         </Section>
 
-        {/* ── Log Out ─────────────────────────────────────────────────────── */}
-        <button
-          type="button"
-          onClick={handleLogOut}
-          disabled={loggingOut}
-          className="w-full py-3.5 rounded-full text-sm font-bold transition-all"
-          style={{ background: 'rgba(244,114,182,0.12)', color: '#BE123C' }}
-        >
-          {loggingOut ? 'Signing out…' : 'Log Out'}
-        </button>
+        {/* ── Log Out — own profile only ───────────────────────────────────── */}
+        {isOwn && (
+          <button
+            type="button"
+            onClick={handleLogOut}
+            disabled={loggingOut}
+            className="w-full py-3.5 rounded-full text-sm font-bold transition-all"
+            style={{ background: 'rgba(244,114,182,0.12)', color: '#BE123C' }}
+          >
+            {loggingOut ? 'Signing out…' : 'Log Out'}
+          </button>
+        )}
 
       </div>
 
+      {/* ── Modals — own profile only ───────────────────────────────────────── */}
       {/* ── Avatar crop overlay ─────────────────────────────────────────────── */}
-      {cropSrc && (
+      {isOwn && cropSrc && (
         <div className="fixed inset-0 flex flex-col" style={{ zIndex: 60, background: '#000' }}>
 
           {/* Top bar */}
@@ -819,7 +865,7 @@ export default function ProfileScreen({ userId, onLogOut, onSelectMoment, onEdit
       )}
 
       {/* ── Edit Profile Modal ──────────────────────────────────────────────── */}
-      {activeModal === 'edit' && (
+      {isOwn && activeModal === 'edit' && (
         <div
           className="fixed inset-0 z-50 flex items-end justify-center"
           style={{ background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(4px)' }}
@@ -923,7 +969,7 @@ export default function ProfileScreen({ userId, onLogOut, onSelectMoment, onEdit
       )}
 
       {/* ── Manage Moments Modal ────────────────────────────────────────────── */}
-      {activeModal === 'moments' && (
+      {isOwn && activeModal === 'moments' && (
         <div
           className="fixed inset-0 z-50 flex items-end justify-center"
           style={{ background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(4px)' }}
@@ -1000,7 +1046,7 @@ export default function ProfileScreen({ userId, onLogOut, onSelectMoment, onEdit
       )}
 
       {/* ── Travel Tags Modal ───────────────────────────────────────────────── */}
-      {activeModal === 'tags' && (
+      {isOwn && activeModal === 'tags' && (
         <div
           className="fixed inset-0 z-50 flex items-end justify-center"
           style={{ background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(4px)' }}
@@ -1081,7 +1127,7 @@ export default function ProfileScreen({ userId, onLogOut, onSelectMoment, onEdit
       )}
 
       {/* ── Delete Account Confirmation ─────────────────────────────────────── */}
-      {activeModal === 'delete' && (
+      {isOwn && activeModal === 'delete' && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-5"
           style={{ background: 'rgba(15,23,42,0.60)', backdropFilter: 'blur(4px)' }}
