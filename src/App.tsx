@@ -263,6 +263,7 @@ function AppRoutes() {
           <Search
             onBack={() => navigate(-1)}
             onViewProfile={id => navigate(`/profile/${id}`)}
+            onOpenChat={(id, name) => navigate(`/chat/${id}`, { state: { partnerName: name } })}
           />
         } />
 

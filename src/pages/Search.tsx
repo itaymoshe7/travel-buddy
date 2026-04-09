@@ -13,6 +13,7 @@ interface UserResult {
 interface Props {
   onBack:        () => void
   onViewProfile: (userId: string) => void
+  onOpenChat:    (chatId: string, name: string) => void
 }
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
@@ -44,9 +45,116 @@ function Avatar({ url, name }: { url: string | null; name: string | null }) {
   )
 }
 
+// ─── User Row ─────────────────────────────────────────────────────────────────
+
+function UserRow({
+  user,
+  onViewProfile,
+  onOpenChat,
+}: {
+  user:          UserResult
+  onViewProfile: (id: string) => void
+  onOpenChat:    (chatId: string, name: string) => void
+}) {
+  const [menuOpen,  setMenuOpen]  = useState(false)
+  const [messaging, setMessaging] = useState(false)
+
+  async function handleMessage() {
+    setMenuOpen(false)
+    if (messaging) return
+    setMessaging(true)
+    const { data: chatId, error } = await supabase.rpc('find_or_create_dm', {
+      other_user_id: user.id,
+    })
+    setMessaging(false)
+    if (!error && chatId) onOpenChat(chatId as string, user.full_name ?? 'Traveller')
+  }
+
+  return (
+    <div className="flex items-center gap-3 px-3 py-2.5 rounded-2xl"
+      style={{ background: 'transparent' }}>
+
+      {/* Avatar + name — click → profile */}
+      <button
+        type="button"
+        onClick={() => onViewProfile(user.id)}
+        className="flex items-center gap-3 flex-1 min-w-0 text-left focus:outline-none"
+      >
+        <Avatar url={user.avatar_url} name={user.full_name} />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold truncate" style={{ color: '#0F172A' }}>
+            {user.full_name ?? 'Traveller'}
+          </p>
+          {user.bio && (
+            <p className="text-xs truncate mt-0.5" style={{ color: '#94A3B8' }}>
+              {user.bio}
+            </p>
+          )}
+        </div>
+      </button>
+
+      {/* 3-dot menu */}
+      <div
+        className="relative shrink-0"
+        tabIndex={-1}
+        onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setMenuOpen(false) }}
+      >
+        <button
+          type="button"
+          onClick={e => { e.stopPropagation(); setMenuOpen(v => !v) }}
+          className="w-8 h-8 rounded-full flex items-center justify-center focus:outline-none"
+          style={{ background: 'rgba(15,23,42,0.06)', color: '#64748B' }}
+          aria-label="Options"
+        >
+          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+            <circle cx="10" cy="4"  r="1.5" />
+            <circle cx="10" cy="10" r="1.5" />
+            <circle cx="10" cy="16" r="1.5" />
+          </svg>
+        </button>
+
+        {menuOpen && (
+          <div
+            className="absolute top-full right-0 mt-1.5 w-44 rounded-2xl overflow-hidden z-20"
+            style={{
+              background:     'rgba(15,23,42,0.88)',
+              backdropFilter: 'blur(16px)',
+              border:         '1px solid rgba(255,255,255,0.12)',
+              boxShadow:      '0 8px 24px rgba(0,0,0,0.30)',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => { setMenuOpen(false); onViewProfile(user.id) }}
+              className="w-full px-4 py-3 text-left text-sm font-medium text-white focus:outline-none"
+              style={{ background: 'transparent' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            >
+              View Profile
+            </button>
+            <div style={{ height: '1px', background: 'rgba(255,255,255,0.10)' }} />
+            <button
+              type="button"
+              onClick={handleMessage}
+              disabled={messaging}
+              className="w-full px-4 py-3 text-left text-sm font-medium text-white focus:outline-none"
+              style={{ background: 'transparent', opacity: messaging ? 0.6 : 1 }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            >
+              {messaging ? 'Opening…' : 'Message'}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function Search({ onBack, onViewProfile }: Props) {
+export default function Search({ onBack, onViewProfile, onOpenChat }: Props) {
   const [query,   setQuery]   = useState('')
   const [results, setResults] = useState<UserResult[]>([])
   const [loading, setLoading] = useState(false)
@@ -215,31 +323,12 @@ export default function Search({ onBack, onViewProfile }: Props) {
         {!loading && results.length > 0 && (
           <div className="flex flex-col gap-1">
             {results.map(user => (
-              <button
+              <UserRow
                 key={user.id}
-                type="button"
-                onClick={() => onViewProfile(user.id)}
-                className="w-full flex items-center gap-3 px-3 py-3 rounded-2xl text-left transition-colors focus:outline-none"
-                style={{ background: 'transparent' }}
-                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(241,245,249,0.8)')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-              >
-                <Avatar url={user.avatar_url} name={user.full_name} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate" style={{ color: '#0F172A' }}>
-                    {user.full_name ?? 'Traveller'}
-                  </p>
-                  {user.bio && (
-                    <p className="text-xs truncate mt-0.5" style={{ color: '#94A3B8' }}>
-                      {user.bio}
-                    </p>
-                  )}
-                </div>
-                <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24"
-                  stroke="currentColor" strokeWidth={2} style={{ color: '#CBD5E1' }}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
+                user={user}
+                onViewProfile={onViewProfile}
+                onOpenChat={onOpenChat}
+              />
             ))}
           </div>
         )}
